@@ -389,7 +389,8 @@
     const X = v => L + (v - o.xr[0]) / (o.xr[1] - o.xr[0]) * (w - L - R), Y = v => T + (1 - (v - o.yr[0]) / (o.yr[1] - o.yr[0])) * (h - T - B);
     c.font = '10.5px JetBrains Mono, monospace'; c.fillStyle = css('--muted'); c.strokeStyle = css('--border'); c.lineWidth = 1;
     o.yt.forEach(v => { c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(w - R, Y(v)); c.stroke(); c.textAlign = 'right'; c.fillText(o.yf ? o.yf(v) : v, L - 6, Y(v) + 3.5); });
-    c.textAlign = 'center'; o.xt.forEach(v => c.fillText(v, X(v), h - B + 15));
+    c.textAlign = 'center'; o.xt.forEach((v, i) => c.fillText(o.xtl ? o.xtl[i] : v, X(v), h - B + 15));
+    if (o.vline != null) { c.save(); c.strokeStyle = css('--muted'); c.setLineDash([3, 3]); c.beginPath(); c.moveTo(X(o.vline), T); c.lineTo(X(o.vline), h - B); c.stroke(); c.restore(); }
     c.fillText(o.xl, L + (w - L - R) / 2, h - 2);
     if (o.zero) { c.strokeStyle = css('--muted'); c.globalAlpha = .6; c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(w - R, Y(0)); c.stroke(); c.globalAlpha = 1; }
     if (o.yl) { c.save(); c.translate(10, T + (h - T - B) / 2); c.rotate(-Math.PI / 2); c.fillText(o.yl, 0, 0); c.restore(); }
@@ -408,8 +409,9 @@
   const S = (d, col) => ({ x: d.x, y: d.y, se: d.se, col });
   const F = [2, 4, 6, 8, 10, 12, 14], Tt = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
   const specs = {
-    single: () => ({ xr: [0, 12], yr: [0, 1.3], xt: [0, 2, 4, 6, 8, 10, 12], yt: [0, 0.5, 1], yf: v => v ? v.toFixed(1) : '0', xl: 'frequency (Hz)', yl: 'power (rel. peak)',
-      series: [S(D.single, '--mag')], sig: [{ x: D.single.sig, y: 1.22, col: '--mag' }], notes: [{ t: '8 Hz', x: 8.7, y: 1.02 }] }),
+    single: () => ({ xr: [0, 1], yr: [0, 1.3], xt: D.single.ticks.map(t => t[0]), xtl: D.single.ticks.map(t => t[1]), vline: D.single.peak,
+      yt: [0, 0.5, 1], yf: v => v ? v.toFixed(1) : '0', xl: 'frequency (Hz)', yl: 'power (rel. peak)',
+      series: [S(D.single, '--mag')], sig: [{ x: D.single.sig, y: 1.22, col: '--mag' }], notes: [{ t: '8 Hz', x: D.single.peak + 0.04, y: 1.02 }] }),
     cloudsATC: () => ({ xr: [0.25, 0.75], yr: [-0.15, 0.15], xt: [0.3, 0.4, 0.5, 0.6, 0.7], yt: [-0.1, 0, 0.1], xl: 'time after reset (s)', yl: 'accuracy (detrended)', zero: true,
       series: [S(D.clouds.atc.blue, '--c2'), S(D.clouds.atc.red, '--red')] }),
     cloudsSpec: () => ({ xr: [1, 12], yr: [0, 4.8], xt: [2, 4, 6, 8, 10, 12], yt: [0, 1, 2, 3, 4], xl: 'frequency (Hz)', yl: 'power (×10⁻³)',
