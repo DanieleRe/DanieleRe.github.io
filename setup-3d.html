@@ -569,8 +569,14 @@
     // zoom lens: the real 1 kHz carriers and the pulse over 20 ms around the playhead
     const lx = w - lensW - 6, ly = 6, lh = h - 12;
     hctx.strokeStyle = css('--border'); hctx.strokeRect(lx, ly, lensW, lh);
-    hctx.fillStyle = css('--muted'); hctx.fillText(`zoom · ${Math.round(zoom * 1000)} ms`, lx + 6, ly + 12);
-    hctx.fillText(t <= 1 ? `t = ${Math.round(t * 1000)} ms` : 'rest', lx + lensW - 78, ly + 12);
+    hctx.fillStyle = css('--muted');
+    if (lensW >= 170) {
+      hctx.fillText(`zoom · ${Math.round(zoom * 1000)} ms`, lx + 6, ly + 12);
+      hctx.fillText(t <= 1 ? `t = ${Math.round(t * 1000)} ms` : 'rest', lx + lensW - 78, ly + 12);
+    } else {                                                                        // narrow lens (phones): short labels in opposite corners
+      hctx.fillText(`${Math.round(zoom * 1000)} ms`, lx + 5, ly + 12);
+      hctx.textAlign = 'right'; hctx.fillText(t <= 1 ? `t ${Math.round(t * 1000)}` : 'rest', lx + lensW - 5, ly + 12); hctx.textAlign = 'left';
+    }
     const lfy = ly + lh * 0.42, lsc = lh * 0.15, lpy = ly + lh * 0.84, lpa = lh * 0.1;
     hctx.strokeStyle = css('--front'); hctx.lineWidth = 1.3; hctx.beginPath();
     for (let i = 0; i <= 400; i++) { const tt = t - zoom / 2 + zoom * i / 400, x = lx + 4 + (lensW - 8) * i / 400, y = lfy - field(tt) * lsc; i ? hctx.lineTo(x, y) : hctx.moveTo(x, y); }
@@ -586,9 +592,16 @@
     const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
     // portrait screens: widen the vertical field so the head keeps the same width it has in landscape
     camera.fov = camera.aspect < 1 ? 2 * Math.atan(Math.tan(16 * Math.PI / 180) / camera.aspect) * 180 / Math.PI : 32;
+    // portrait: centre the head in the gap between the top controls and the bottom waveform strip
+    camera.clearViewOffset();
+    if (camera.aspect < 1) {
+      const top = document.querySelector('.ui.top'), hudEl = document.querySelector('.ui.hud');
+      const t0 = top ? top.getBoundingClientRect().bottom : 0, b0 = hudEl ? hudEl.getBoundingClientRect().top : h;
+      if (b0 > t0) camera.setViewOffset(w, h, 0, -Math.round((t0 + b0) / 2 - h / 2), w, h);
+    }
     camera.updateProjectionMatrix();
   }
-  addEventListener('resize', resize); resize();
+  addEventListener('resize', resize); resize(); addEventListener('load', resize);
   let last = performance.now(), st = 0;
   function frame(now) {
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
