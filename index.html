@@ -127,6 +127,8 @@
   .chip img { height: 30px; width: auto; max-width: 120px; object-fit: contain; vertical-align: middle; margin-right: 9px; background: #fff; border-radius: 6px; padding: 3px 5px; }
   .chip { display: inline-flex; align-items: center; font-size: 13.5px; padding: 5px 14px 5px 6px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
   .btn-grad { display: inline-block; position: relative; padding: 12px 22px; border-radius: 10px; color: var(--head); font-weight: 600; background: linear-gradient(var(--bg), var(--bg)) padding-box, var(--grad) border-box; border: 2px solid transparent; margin-right: 10px; margin-bottom: 8px; }
+  button.btn-grad { cursor: pointer; font: inherit; font-weight: 600; }
+  .copy-btn { padding: 12px 16px; margin-left: -4px; }
   .btn-grad:hover { text-decoration: none; box-shadow: 0 0 24px color-mix(in srgb, var(--c2) 40%, transparent); }
 
   /* skills */
@@ -285,7 +287,7 @@
           <span class="chip"><img src="logos/eic.png" alt="" aria-hidden="true">European Innovation Council</span>
         </div>
         <a class="btn-grad" href="Daniele_Re_CV.pdf">Download CV</a>
-        <a class="btn-grad" href="mailto:daniele.rejo@gmail.com">Get in touch</a>
+        <a class="btn-grad" href="#contact">Get in touch</a>
       </div>
     </div>
   </div>
@@ -505,7 +507,7 @@
       <a class="pub reveal" href="https://doi.org/10.1101/2022.09.26.509017" target="_blank" rel="noopener"><span class="yr grad-text">2022</span><div><span class="t">Perplexity about periodicity repeats perpetually: a response to Brookshire</span><small><b>Re, D.</b>, Tosato, T., Fries, P., &amp; Landau, A. N. · <span class="venue">bioRxiv</span></small></div></a>
       <a class="pub reveal" href="https://doi.org/10.1016/j.cub.2019.01.010" target="_blank" rel="noopener"><span class="yr grad-text">2019</span><div><span class="t">Feature-based attention samples stimuli rhythmically</span><small><b>Re, D.</b>, Inbar, M., Richter, C. G., &amp; Landau, A. N. · <span class="venue">Current Biology</span></small></div></a>
       <a class="pub reveal" href="https://doi.org/10.5220/0006124702040215" target="_blank" rel="noopener"><span class="yr grad-text">2017</span><div><span class="t">An integrated system based on binocular learned receptive fields for saccade-vergence on visually salient targets</span><small><b>Re, D.</b>, Gibaldi, A., Sabatini, S. P., &amp; Spratling, M. W. · <span class="venue">VISAPP (Int. Conf. on Computer Vision Theory and Applications)</span></small></div></a>
-      <p class="reveal" style="text-align:center;margin-top:12px"><a href="https://scholar.google.com/citations?user=ih-RX8kAAAAJ&amp;hl=en">Full list on Google Scholar →</a></p>
+      <p class="reveal" style="text-align:center;margin-top:12px"><a href="https://scholar.google.com/citations?user=ih-RX8kAAAAJ&amp;hl=en" target="_blank" rel="noopener">Full list on Google Scholar →</a></p>
     </div>
   </div>
 </section>
@@ -517,9 +519,9 @@
     <div class="contact-box reveal">
       <h3>Building something that measures people?</h3>
       <p>I'm open to algorithm, research-scientist and ML roles in health, wearables and neurotech, in Israel, Europe or further afield. Italian (EU) citizen, based in Givatayim.</p>
-      <a class="btn-grad" href="mailto:daniele.rejo@gmail.com">daniele.rejo@gmail.com</a>
-      <a class="btn-grad" href="https://www.linkedin.com/in/daniele-re-phd-0a9664282">LinkedIn</a>
-      <a class="btn-grad" href="https://scholar.google.com/citations?user=ih-RX8kAAAAJ&amp;hl=en">Google Scholar</a>
+      <a class="btn-grad" href="mailto:daniele.rejo@gmail.com">daniele.rejo@gmail.com</a><button class="btn-grad copy-btn" id="copyEmail" type="button" aria-label="Copy email address">Copy</button>
+      <a class="btn-grad" href="https://www.linkedin.com/in/daniele-re-phd-0a9664282" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn-grad" href="https://scholar.google.com/citations?user=ih-RX8kAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a>
     </div>
   </div>
 </section>
@@ -582,6 +584,14 @@
   }
 
 
+  /* ---- copy email (works even without a desktop mail app) ---- */
+  const cb = document.getElementById('copyEmail');
+  if (cb) cb.addEventListener('click', async () => {
+    const addr = 'daniele.rejo@gmail.com';
+    try { await navigator.clipboard.writeText(addr); }
+    catch (e) { const t = document.createElement('textarea'); t.value = addr; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e2) {} t.remove(); }
+    cb.textContent = 'Copied ✓'; setTimeout(() => { cb.textContent = 'Copy'; }, 1800);
+  });
   /* ---- light / dark toggle ---- */
   const tb = document.getElementById('themeBtn');
   const setIcon = () => { const dark = document.documentElement.getAttribute('data-theme') === 'dark'; tb.innerHTML = dark ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>' : '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'; tb.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme'); };
