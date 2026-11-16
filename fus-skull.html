@@ -70,6 +70,7 @@
   const toTop = () => { window.scrollTo(0, 0); const h = document.querySelector('header'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'start' }); };
   toTop(); addEventListener('DOMContentLoaded', toTop); addEventListener('load', () => { toTop(); setTimeout(toTop, 150); });
 </script>
+<script src="analytics.js" defer></script>
 </head>
 <body>
 <div class="wrap">

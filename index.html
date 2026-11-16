@@ -216,6 +216,7 @@
     .typed .caret, .scroll-cue::after { animation: none; }
   }
 </style>
+<script src="analytics.js" defer></script>
 </head>
 <body>
 
@@ -514,7 +515,7 @@
   </div>
 </section>
 
-<footer>© <span id="yr"></span> Daniele Re · Last updated November 2026 · Hero animation and project sketches are illustrative, not real data.</footer>
+<footer>© <span id="yr"></span> Daniele Re · Last updated November 2026 · This site counts visits and clicks anonymously with Umami: no cookies, no personal data.</footer>
 
 <script>
 (() => {
@@ -578,7 +579,7 @@
   setIcon();
   tb.addEventListener('click', () => {
     const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('dr-theme', t); } catch (e) {} setIcon();
+    document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('dr-theme', t); } catch (e) {} setIcon(); if (window.drTrack) drTrack('theme', { to: t });
   });
   /* ---- project cards with a page: whole card is the link ---- */
   document.querySelectorAll('.proj.linked').forEach(c => {
