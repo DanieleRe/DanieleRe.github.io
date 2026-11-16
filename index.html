@@ -48,6 +48,8 @@
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
   .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+  /* ---------- background: spiking network ---------- */
+  #neuro { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
   /* ---------- nav ---------- */
   .nav .brand { order: 0; } .nav ul { order: 2; margin-left: auto; } .menu-btn { order: 4; }
   @media (max-width: 760px) { .theme-btn { margin-left: auto !important; margin-right: 10px; } }
@@ -212,6 +214,7 @@
 </head>
 <body>
 
+<canvas id="neuro" aria-hidden="true"></canvas>
 <nav class="nav" id="nav">
   <a class="brand" href="#about" style="text-decoration:none">
     <svg viewBox="0 0 26 26" aria-hidden="true"><defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#2ee6d6"/><stop offset="1" stop-color="#a77bff"/></linearGradient></defs><circle cx="13" cy="13" r="12" fill="none" stroke="url(#lg)" stroke-width="1.5"/><polyline points="4,14 8,14 10,8 13,19 16,6 18,14 22,14" fill="none" stroke="url(#lg)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
@@ -565,6 +568,74 @@
     };
     tick();
   }
+
+
+  /* ---- background: a sparse spiking network ----
+     Neurons drift very slowly; each fires at random (low Poisson rate). A spike glows at the soma and
+     travels along the cell's connections; on arrival it can trigger the next cell (after a refractory
+     period), so small cascades ripple through the network. Faint by design: it sits behind the text. */
+  (() => {
+    const cv = document.getElementById('neuro'), ctx = cv.getContext('2d');
+    let W = 0, H = 0, N = [], E = [], P = [], last = 0, running = true;
+    const RATE = 0.05, SPEED = 140, P_PROP = 0.32, REFRAC = 2.2, MAXP = 60;
+    function build() {
+      const d = devicePixelRatio || 1; W = innerWidth; H = innerHeight;
+      cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+      const n = Math.max(24, Math.min(80, Math.round(W * H / 24000)));
+      N = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * 4, vy: (Math.random() - .5) * 4,
+                                             r: 1.6 + Math.random() * 1.8, glow: 0, ref: -9 }));
+      E = []; const seen = new Set();
+      N.forEach((a, i) => {
+        N.map((b, j) => [j, Math.hypot(a.x - b.x, a.y - b.y)]).filter(([j, dd]) => j !== i && dd < 260).sort((p, q) => p[1] - q[1]).slice(0, 3)
+          .forEach(([j]) => { const k = i < j ? i + '-' + j : j + '-' + i; if (seen.has(k)) return; seen.add(k);
+            E.push({ a: i, b: j, bend: (Math.random() - .5) * 0.5 }); });
+      });
+      P = [];
+    }
+    const ctrl = e => { const a = N[e.a], b = N[e.b]; return { x: (a.x + b.x) / 2 - (b.y - a.y) * e.bend, y: (a.y + b.y) / 2 + (b.x - a.x) * e.bend }; };
+    const qpt = (a, c, b, t) => ({ x: (1 - t) ** 2 * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) ** 2 * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
+    function fire(i, now) {
+      const n = N[i]; if (now - n.ref < REFRAC) return; n.ref = now; n.glow = 1;
+      E.forEach(e => { if (P.length >= MAXP) return;
+        if (e.a === i) P.push({ e, from: e.a, to: e.b, t: 0 }); else if (e.b === i) P.push({ e, from: e.b, to: e.a, t: 0 }); });
+    }
+    function frame(ts) {
+      const now = ts / 1000, dt = Math.min(0.05, now - (last || now)); last = now;
+      const col = css('--c2'), spk = css('--c1'), spk2 = css('--c3');
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const aLine = dark ? 0.12 : 0.14, aNode = dark ? 0.34 : 0.32, aSpk = dark ? 0.8 : 0.75;
+      ctx.clearRect(0, 0, W, H);
+      N.forEach(n => { n.x += n.vx * dt; n.y += n.vy * dt; if (n.x < -20 || n.x > W + 20) n.vx *= -1; if (n.y < -20 || n.y > H + 20) n.vy *= -1;
+                       n.glow = Math.max(0, n.glow - dt * 1.2); });
+      // dendrites
+      ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = aLine;
+      ctx.beginPath(); E.forEach(e => { const a = N[e.a], b = N[e.b], c = ctrl(e); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(c.x, c.y, b.x, b.y); }); ctx.stroke();
+      // spontaneous firing
+      if (!reduce) N.forEach((n, i) => { if (Math.random() < RATE * dt) fire(i, now); });
+      // travelling spikes
+      P = P.filter(p => {
+        const a = N[p.from], b = N[p.to], c = ctrl(p.e), L = Math.hypot(a.x - b.x, a.y - b.y) + 1;
+        p.t += SPEED * dt / L;
+        if (p.t >= 1) { if (Math.random() < P_PROP) fire(p.to, now); return false; }
+        for (let k = 0; k < 5; k++) {                          // short comet tail
+          const q = qpt(a, c, b, Math.max(0, p.t - k * 0.025));
+          ctx.globalAlpha = aSpk * (1 - k / 5); ctx.fillStyle = p.from % 2 ? spk : spk2;
+          ctx.beginPath(); ctx.arc(q.x, q.y, 2.2 - k * 0.3, 0, 7); ctx.fill();
+        }
+        return true;
+      });
+      // somata
+      N.forEach(n => {
+        if (n.glow > 0) { ctx.globalAlpha = n.glow * aSpk * 0.5; ctx.fillStyle = spk; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 10 * n.glow, 0, 7); ctx.fill(); }
+        ctx.globalAlpha = aNode + n.glow * 0.4; ctx.fillStyle = n.glow > 0.05 ? spk : col; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + n.glow * 1.5, 0, 7); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      if (running && !reduce) requestAnimationFrame(frame);
+    }
+    build(); addEventListener('resize', () => { build(); if (reduce) frame(0); });
+    document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running && !reduce) { last = 0; requestAnimationFrame(frame); } });
+    if (reduce) frame(0); else requestAnimationFrame(frame);
+  })();
 
   /* ---- light / dark toggle ---- */
   const tb = document.getElementById('themeBtn');
