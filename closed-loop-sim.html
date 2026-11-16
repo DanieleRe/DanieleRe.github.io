@@ -76,6 +76,8 @@
   .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
   .legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
   footer { padding: 40px 0 56px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 40px; }
+  .setup3d { height: 560px; }
+  @media (max-width: 600px) { .setup3d { height: min(88vh, 760px); } }
 </style>
 <script>
   // Always open at the top (the viewer can carry over the previous page's scroll position)
@@ -99,7 +101,7 @@
     <h2><small>00</small>The setup in 3D</h2>
     <p>Three pairs of electrodes, all dry-printed. A <b>pulse pair</b> above and below the right eye delivers brief biphasic pulses. A <b>front pair</b> beside the eye carries a 1000 Hz current, and a <b>neck pair</b> on the right side of the back of the neck carries 1005 Hz. Where the two carriers overlap they beat at 5 Hz, and the pulses are timed to that beat. Drag to rotate, and switch conditions at the top.</p>
     <div class="card" style="padding:0;overflow:hidden">
-      <iframe src="setup-3d.html" title="3D view of the stimulation montage" loading="lazy" style="width:100%;height:560px;border:0;display:block"></iframe>
+      <iframe class="setup3d" src="setup-3d.html" title="3D view of the stimulation montage" loading="lazy" style="width:100%;border:0;display:block"></iframe>
     </div>
     <p class="note"><a href="setup-3d.html">Open the 3D view full screen →</a> Head: the MIDA model (scalp, eyes, brain, and the real optic nerves, chiasm and tracts). Electrode positions come from our SimNIBS model on <em>ernie</em>, transferred by aligning the eyes; current paths are illustrative.</p>
   </section>

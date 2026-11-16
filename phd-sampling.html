@@ -299,7 +299,7 @@
       c.fillStyle = css('--panel-2'); c.fillRect(40, Y(1), w - 50, Y(0.9) - Y(1)); c.fillRect(40, Y(0.1), w - 50, Y(0) - Y(0.1));
       c.fillStyle = css('--muted'); c.fillText('hit', 6, Y(0.95) + 4); c.fillText('miss', 6, Y(0.05) + 4);
       c.strokeStyle = css('--border'); [0.25, 0.5, 0.75].forEach(p => { c.beginPath(); c.moveTo(40, Y(p)); c.lineTo(w - 10, Y(p)); c.stroke(); c.fillText(Math.round(p * 100) + '%', 6, Y(p) + 4); });
-      [0.25, 0.45, 0.65, 0.85].forEach(t => c.fillText(t.toFixed(2) + ' s', X(t) - 14, h - 6));
+      [0.25, 0.45, 0.65, 0.85].forEach(t => { const s = t.toFixed(2) + ' s', tw = c.measureText(s).width; c.fillText(s, Math.min(X(t) - tw / 2, w - tw - 2), h - 6); });
       // every trial as a dot: hits along the top, misses along the bottom (most recent 6000)
       const a0 = Math.max(0.12, Math.min(0.6, 60 / Math.sqrt(trials.length + 1)));
       trials.forEach(tr => { if (!objs.includes(tr.obj)) return; c.fillStyle = cols[tr.obj]; c.globalAlpha = a0;
@@ -313,7 +313,7 @@
       const sp = objs.map(o => spectrum(series(o))), mx = Math.max(1e-3, ...sp.flat().map(r => r[1]));
       const X = f => 34 + (f - 1) / 11 * (w - 44), Y = v => h - 22 - v / mx * (h - 34);
       c.fillStyle = css('--muted'); c.font = '10.5px JetBrains Mono, monospace';
-      [2, 4, 6, 8, 10, 12].forEach(f => c.fillText(f + ' Hz', X(f) - 12, h - 6));
+      [2, 4, 6, 8, 10, 12].forEach(f => { const s = f + ' Hz', tw = c.measureText(s).width; c.fillText(s, Math.min(X(f) - tw / 2, w - tw - 2), h - 6); });
       sp.forEach((s, o) => { c.strokeStyle = cols[o]; c.lineWidth = 2; c.beginPath(); s.forEach(([f, v], i) => i ? c.lineTo(X(f), Y(v)) : c.moveTo(X(f), Y(v))); c.stroke(); });
       const tf = mode === 'one' ? 8 : 4; c.strokeStyle = css('--head'); c.globalAlpha = 0.35; c.setLineDash([3, 3]); c.beginPath(); c.moveTo(X(tf), 8); c.lineTo(X(tf), h - 22); c.stroke(); c.setLineDash([]); c.globalAlpha = 1;
     }

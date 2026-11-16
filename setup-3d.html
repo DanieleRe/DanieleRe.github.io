@@ -591,12 +591,15 @@
   function resize() {
     const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
     // portrait screens: widen the vertical field so the head keeps the same width it has in landscape
-    camera.fov = camera.aspect < 1 ? 2 * Math.atan(Math.tan(16 * Math.PI / 180) / camera.aspect) * 180 / Math.PI : 32;
-    // portrait: centre the head in the gap between the top controls and the bottom waveform strip
-    camera.clearViewOffset();
+    // portrait (phones, embedded preview): fit the head to the screen width AND to the gap between the
+    // top controls and the bottom waveform strip, and centre it in that gap
+    camera.fov = 32; camera.clearViewOffset();
     if (camera.aspect < 1) {
       const top = document.querySelector('.ui.top'), hudEl = document.querySelector('.ui.hud');
       const t0 = top ? top.getBoundingClientRect().bottom : 0, b0 = hudEl ? hudEl.getBoundingClientRect().top : h;
+      const gap = Math.max(120, b0 - t0 - 8);
+      const k = Math.max(h / w, h / gap);                                  // how much smaller the head must be drawn
+      camera.fov = 2 * Math.atan(Math.tan(16 * Math.PI / 180) * k) * 180 / Math.PI;
       if (b0 > t0) camera.setViewOffset(w, h, 0, -Math.round((t0 + b0) / 2 - h / 2), w, h);
     }
     camera.updateProjectionMatrix();
