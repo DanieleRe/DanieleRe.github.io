@@ -8,7 +8,7 @@
    - every button / toggle press and slider change on the interactive pages (page + label)
    - theme switch, scroll depth (50% / 90%), and ?ref=<tag> campaign tags from application links */
 (function () {
-  var WEBSITE_ID = '';                       // <-- paste the Umami website ID here
+  var WEBSITE_ID = 'bc6a171b-b82e-48d0-89bc-6b86477f5efc';   // Umami Cloud (EU), site "Daniele Re portfolio"
   var DOMAIN = 'danielere.github.io';
   var page = (location.pathname.split('/').pop() || 'index.html').replace('.html', '') || 'index';
   var queue = [];
