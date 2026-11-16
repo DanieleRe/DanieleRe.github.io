@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+  // light by default; a visitor's choice (toggle on the home page) is remembered across pages
+  (function () { var t = 'light'; try { t = localStorage.getItem('dr-theme') || 'light'; } catch (e) {} document.documentElement.setAttribute('data-theme', t); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Timing Pulses to a Beat</title>
 <meta name="description" content="Interactive explainer: temporal-interference beats, pulse timing and closed-loop control for wearable transorbital phosphene stimulation.">

@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+  // light by default; a visitor's choice (toggle on the home page) is remembered across pages
+  (function () { var t = 'light'; try { t = localStorage.getItem('dr-theme') || 'light'; } catch (e) {} document.documentElement.setAttribute('data-theme', t); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ultrasound Through the Skull</title>
 <meta name="description" content="Live 2-D acoustic simulation: focusing 500 kHz ultrasound on a deep brain target through the skull, with three ways of planning the array.">

@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+  // light by default; a visitor's choice (toggle on the home page) is remembered across pages
+  (function () { var t = 'light'; try { t = localStorage.getItem('dr-theme') || 'light'; } catch (e) {} document.documentElement.setAttribute('data-theme', t); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Attention in Rhythm</title>
 <meta name="description" content="PhD research: attention samples the visual world rhythmically, at about 8 Hz for one object and about 4 Hz wherever two representations compete, from eye channels to features.">

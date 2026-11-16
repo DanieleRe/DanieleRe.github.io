@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+  // light by default; a visitor's choice (toggle on the home page) is remembered across pages
+  (function () { var t = 'light'; try { t = localStorage.getItem('dr-theme') || 'light'; } catch (e) {} document.documentElement.setAttribute('data-theme', t); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Daniele Re, PhD</title>
 <meta name="description" content="Daniele Re, PhD. Signal processing and machine learning for wearable, ocular and neural sensing: from data capture to validated measurement.">
@@ -25,13 +29,13 @@
     --edu: #f5c86b; --res: #2ee6d6; --pub: #a77bff; --teach: #5be38a;
   }
   :root[data-theme="light"] {
-    --bg: #f6f7fb; --bg-2: #eceff7; --panel: rgba(40,60,140,.05); --panel-2: rgba(40,60,140,.09);
+    --bg: #f5f7fb; --bg-2: #edf0f7; --panel: #ffffff; --panel-2: #f1f4fa;
     --border: rgba(40,60,140,.15); --text: #3a4560; --muted: #6a7590; --head: #0e1630;
     --c1: #0aa89b; --c2: #3a5fe0; --c3: #7a4fe0;
   }
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
-      --bg: #f6f7fb; --bg-2: #eceff7; --panel: rgba(40,60,140,.05); --panel-2: rgba(40,60,140,.09);
+      --bg: #f5f7fb; --bg-2: #edf0f7; --panel: #ffffff; --panel-2: #f1f4fa;
       --border: rgba(40,60,140,.15); --text: #3a4560; --muted: #6a7590; --head: #0e1630;
       --c1: #0aa89b; --c2: #3a5fe0; --c3: #7a4fe0;
     }
@@ -45,6 +49,13 @@
   .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
   /* ---------- nav ---------- */
+  .nav .brand { order: 0; } .nav ul { order: 2; margin-left: auto; } .menu-btn { order: 4; }
+  @media (max-width: 760px) { .theme-btn { margin-left: auto !important; margin-right: 10px; } }
+  .theme-btn { order: 3; margin-left: 14px; background: none; border: 1px solid var(--border); color: var(--head); border-radius: 999px; width: 34px; height: 34px; display: grid; place-items: center; padding: 0; cursor: pointer; }
+  .theme-btn:hover { border-color: var(--c1); }
+  :root[data-theme="light"] .glow { opacity: .10; }
+  :root[data-theme="light"] .proj, :root[data-theme="light"] .card { box-shadow: 0 1px 2px rgba(20,30,70,.05), 0 6px 20px rgba(20,30,70,.06); }
+  :root[data-theme="light"] .avatar { box-shadow: 0 10px 40px rgba(40,60,140,.18); }
   .nav { position: fixed; inset: 0 0 auto 0; z-index: 50; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
          background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid transparent; transition: border-color .3s; }
   .nav.scrolled { border-color: var(--border); }
@@ -86,7 +97,7 @@
   /* intro + about */
   section.first { padding-top: 120px; }
   .intro { text-align: center; margin: 0 auto 52px; }
-  .intro h1 { font-family: "Space Grotesk", sans-serif; font-weight: 700; letter-spacing: .04em; font-size: clamp(38px, 7vw, 72px); line-height: 1; margin: 0 0 14px; text-transform: uppercase; }
+  .intro h1 { font-family: "Space Grotesk", sans-serif; font-weight: 700; letter-spacing: .01em; font-size: clamp(38px, 7vw, 70px); line-height: 1.05; margin: 0 0 14px; }
   .intro-sub { color: var(--muted); font-size: 14px; margin-top: 8px; }
   #work { padding-top: 40px; }
   .proj.linked { cursor: pointer; }
@@ -204,8 +215,9 @@
 <nav class="nav" id="nav">
   <a class="brand" href="#about" style="text-decoration:none">
     <svg viewBox="0 0 26 26" aria-hidden="true"><defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#2ee6d6"/><stop offset="1" stop-color="#a77bff"/></linearGradient></defs><circle cx="13" cy="13" r="12" fill="none" stroke="url(#lg)" stroke-width="1.5"/><polyline points="4,14 8,14 10,8 13,19 16,6 18,14 22,14" fill="none" stroke="url(#lg)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
-    <span class="grad-text">Daniele Re</span>
+    <span class="grad-text">Daniele Re, PhD</span>
   </a>
+  <button class="theme-btn" id="themeBtn" aria-label="Switch to dark theme" title="Switch theme"></button>
   <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu">Menu</button>
   <ul id="menu">
     <li><a href="#about">About</a></li>
@@ -224,9 +236,9 @@
   <div class="glow" style="background:var(--c2);left:-200px;top:40px"></div>
   <div class="wrap">
     <div class="intro">
-      <h1 class="grad-text">Daniele Re</h1>
+      <h1 class="grad-text">Daniele Re, PhD</h1>
       <div class="typed mono" aria-live="polite"><span id="typed"></span><span class="caret"></span></div>
-      <div class="intro-sub">PhD · Signal processing &amp; ML for physiological and neural sensing</div>
+      <div class="intro-sub">Signal processing &amp; ML for physiological and neural sensing</div>
     </div>
     <div class="about reveal">
       <div>
@@ -554,6 +566,14 @@
     tick();
   }
 
+  /* ---- light / dark toggle ---- */
+  const tb = document.getElementById('themeBtn');
+  const setIcon = () => { const dark = document.documentElement.getAttribute('data-theme') === 'dark'; tb.innerHTML = dark ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>' : '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'; tb.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme'); };
+  setIcon();
+  tb.addEventListener('click', () => {
+    const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('dr-theme', t); } catch (e) {} setIcon();
+  });
   /* ---- project cards with a page: whole card is the link ---- */
   document.querySelectorAll('.proj.linked').forEach(c => {
     const go = () => { location.href = c.dataset.href; };
