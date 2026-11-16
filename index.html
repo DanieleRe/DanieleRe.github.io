@@ -49,6 +49,9 @@
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
   .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+  /* ---------- page-wide background: faint Cajal-style neuron population ---------- */
+  body { background-image: url('bg-light.svg'); background-size: 1800px auto; background-position: top center; background-repeat: repeat-y; }
+  :root[data-theme="dark"] body { background-image: url('bg-dark.svg'); }
   /* ---------- nav ---------- */
   .nav .brand { order: 0; } .nav ul { order: 2; margin-left: auto; } .menu-btn { order: 4; }
   @media (max-width: 760px) { .theme-btn { margin-left: auto !important; margin-right: 10px; } }
