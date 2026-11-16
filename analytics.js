@@ -17,7 +17,23 @@
     else queue.push([name, data]);
   }
   window.drTrack = track;
-  if (WEBSITE_ID && DOMAINS.indexOf(location.hostname) >= 0) {
+  // Owner opt-out: open danielere.com/?notrack=on once on a device to stop counting it (?notrack=off undoes it).
+  var off = false;
+  try {
+    var nt = new URLSearchParams(location.search).get('notrack');
+    if (nt === 'on') localStorage.setItem('umami.disabled', '1');
+    if (nt === 'off') localStorage.removeItem('umami.disabled');
+    if (nt) history.replaceState(null, '', location.pathname + location.hash);
+    off = localStorage.getItem('umami.disabled') === '1';
+    if (nt === 'on' || nt === 'off') window.addEventListener('DOMContentLoaded', function () {
+      var b = document.createElement('div');
+      b.textContent = off ? 'Analytics off on this device: your visits are not counted.' : 'Analytics back on for this device.';
+      b.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9999;padding:10px 16px;border-radius:10px;background:#1b2a4a;color:#fff;font:14px/1.3 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+      document.body.appendChild(b); setTimeout(function () { b.remove(); }, 5000);
+    });
+  } catch (e) {}
+  if (off) { window.drTrack = track = function () {}; }
+  if (!off && WEBSITE_ID && DOMAINS.indexOf(location.hostname) >= 0) {
     var s = document.createElement('script');
     s.defer = true; s.src = 'https://cloud.umami.is/script.js';
     s.setAttribute('data-website-id', WEBSITE_ID);
