@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Montage in 3D</title>
+<meta name="description" content="Interactive 3D view of the transorbital temporal-interference stimulation montage: pulse pair, front TI pair and neck TI pair.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b16; --panel: rgba(12,18,34,.78); --border: rgba(130,160,255,.18);
+    --text: #b9c3d9; --muted: #7884a0; --head: #eef2ff;
+    --pulse: #f5c86b; --front: #2ee6d6; --neck: #a77bff;
+  }
+  :root[data-theme="light"] { --bg: #f6f7fb; --panel: rgba(255,255,255,.85); --border: rgba(40,60,140,.18); --text: #3a4560; --muted: #6a7590; --head: #0e1630; --pulse: #b7811a; --front: #0aa89b; --neck: #7a4fe0; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f6f7fb; --panel: rgba(255,255,255,.85); --border: rgba(40,60,140,.18); --text: #3a4560; --muted: #6a7590; --head: #0e1630; --pulse: #b7811a; --front: #0aa89b; --neck: #7a4fe0; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.5 "Inter", system-ui, sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+  #stage:active { cursor: grabbing; }
+  .ui { position: fixed; z-index: 5; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(8px); }
+  .top { top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 10px; }
+  .title { color: var(--head); font-weight: 600; margin-right: 6px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+  .seg button, .tog { background: transparent; color: var(--text); border: 0; border-right: 1px solid var(--border); padding: 6px 10px; font: 500 12.5px "Inter", sans-serif; cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"], .tog[aria-pressed="true"] { background: rgba(46,230,214,.16); color: var(--head); }
+  .tog { border: 1px solid var(--border); border-radius: 9px; display: inline-flex; align-items: center; gap: 6px; }
+  .tog i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .legend { left: 12px; bottom: 174px; padding: 10px 12px; max-width: 290px; font-size: 12.5px; }
+  .legend div { display: flex; gap: 8px; align-items: flex-start; margin: 3px 0; }
+  .legend i { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; }
+  .legend b { color: var(--head); font-weight: 600; }
+  .hud { left: 12px; right: 12px; bottom: 12px; height: 150px; padding: 6px 10px; }
+  .hud-site { position: absolute; top: 6px; left: 74px; z-index: 2; }
+  .hud-site button { padding: 3px 9px; font-size: 11.5px; }
+  .det { right: 12px; top: 64px; width: 330px; padding: 10px 12px 8px; }
+  .det-head { color: var(--head); font-weight: 600; font-size: 12.5px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .det-head span { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .det canvas { width: 100%; height: 150px; display: block; margin-top: 6px; }
+  .det-txt { font-size: 12px; margin-top: 4px; }
+  .det-txt b { color: var(--head); }
+  .det-src { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+  body.nolabels .label { display: none !important; }
+  .hud canvas { width: 100%; height: 100%; display: block; }
+  .label { position: fixed; z-index: 4; pointer-events: none; font: 500 11.5px "JetBrains Mono", monospace; color: var(--head); background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; transform: translate(-50%, -140%); white-space: nowrap; }
+  .label.sign { background: none; border: 0; font-size: 15px; font-weight: 700; padding: 0; transform: translate(-50%, -50%); text-shadow: 0 0 6px var(--bg), 0 0 2px var(--bg); }
+  .note { right: 12px; bottom: 174px; padding: 8px 10px; max-width: 260px; font-size: 11.5px; color: var(--muted); }
+  @media (max-width: 900px), (max-height: 680px) { .legend, .note { display: none; } }
+  @media (max-width: 700px) { .hud { height: 100px; } .det { display: none; } }
+  @media (max-height: 680px) { .det { top: auto; bottom: 174px; width: 260px; } .det canvas { height: 110px; } }
+  .fallback { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 24px; }
+</style>
+</head>
+<body>
+<canvas id="stage" aria-label="Rotatable 3D view of the stimulation montage on a head"></canvas>
+
+<div class="ui top">
+  <span class="title">Experiment 2 montage</span>
+  <span class="seg" role="group" aria-label="Condition">
+    <button data-cond="peaks" aria-pressed="true">Pulses on peaks</button>
+    <button data-cond="troughs" aria-pressed="false">On troughs</button>
+    <button data-cond="control" aria-pressed="false">Unmodulated</button>
+    <button data-cond="alone" aria-pressed="false">Pulses alone</button>
+  </span>
+  <button class="tog" data-pair="pulse" aria-pressed="true"><i style="background:var(--pulse)"></i>Pulse</button>
+  <button class="tog" data-pair="front" aria-pressed="true"><i style="background:var(--front)"></i>Front TI</button>
+  <button class="tog" data-pair="neck" aria-pressed="true"><i style="background:var(--neck)"></i>Neck TI</button>
+  <span class="seg" role="group" aria-label="View">
+    <button data-view="front">Front</button><button data-view="side">Side</button><button data-view="back">Back</button>
+  </span>
+  <button class="tog" id="spin" aria-pressed="true">Auto-rotate</button>
+  <button class="tog" id="labelsBtn" aria-pressed="true">Labels</button>
+  <button class="tog" id="resultsBtn" aria-pressed="true">Results</button>
+</div>
+
+<div class="ui legend">
+  <div><i style="background:var(--pulse)"></i><span><b>Pulse pair</b>, + supra / − infra-orbital: biphasic pulses (10 ms − then 10 ms +), 4 per 1 s stimulus</span></div>
+  <div><i style="background:var(--front)"></i><span><b>Front TI pair</b>, − nasal / + temporal: 0.1 mA at 1000 Hz</span></div>
+  <div><i style="background:var(--neck)"></i><span><b>Neck TI pair</b>, horizontal on the right posterior neck, − medial / + lateral: 1 mA at 1005 Hz. Most of its field stays in the neck and posterior scalp</span></div>
+  <div><i style="background:#ffffff;opacity:.7"></i><span><b>Beat (5 Hz)</b>: only ~7% deep at the retina, where the front field is ~11× the neck field; 53–74% deep at the <b>orbital apex</b>, where both fields and the pulse field are comparable</span></div>
+</div>
+
+<div class="ui note">Electrode positions and envelope depths: SimNIBS 4.6 model of the montage on the <em>ernie</em> head (medians). Head: MIDA model (scalp, eyes, brain, optic nerves, chiasm and tracts), with the montage transferred from our <em>ernie</em> model by aligning the eyes; the orbital apex is placed 30 mm along MIDA's right optic nerve; particle paths are illustrative, not the computed field, and the kHz carriers are drawn slowed. Time is slowed 5×. Drag to rotate, scroll to zoom.</div>
+
+<div class="ui det" id="det">
+  <div class="det-head">Detection · Experiment 2 <span>7 people · 1484 trials</span></div>
+  <canvas id="detCv" aria-label="Detection sensitivity per condition and per participant"></canvas>
+  <div class="det-txt" id="detTxt"></div>
+  <div class="det-src">d′ against catch trials (false alarms 2.4%). Re, Ibrahim &amp; Hanein, manuscript in preparation.</div>
+</div>
+
+<div class="ui hud">
+  <span class="seg hud-site" role="group" aria-label="Where the field is shown">
+    <button data-site="apex" aria-pressed="true">Orbital apex</button><button data-site="retina" aria-pressed="false">Retina</button>
+  </span>
+  <canvas id="hud" aria-label="Summed 1000 + 1005 Hz field, its envelope and the biphasic pulses, with a zoomed window at the playhead"></canvas>
+</div>
+<div class="fallback" id="fallback">This 3D view needs WebGL, which isn't available in this browser.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="head_surfaces.js"></script>
+<script>
+(async () => {
+  if (!window.THREE) { document.getElementById('fallback').style.display = 'grid'; return; }
+  // Real ernie surfaces (scalp + eyes) exported from SimNIBS, if present; otherwise a sculpted head is used.
+  async function loadMesh() {
+    try {
+      let b;
+      if (window.HEAD_SURFACES_B64) {                        // works when the page is opened straight from disk
+        const bin = atob(window.HEAD_SURFACES_B64), u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        b = u.buffer;
+      } else {
+        const r = await fetch('head_surfaces.bin'); if (!r.ok) return null;
+        b = await r.arrayBuffer();
+      }
+      // layout v2: magic 'ERN2' + 6 counts (skin, eyes, brain); v1: 4 counts (skin, eyes)
+      const magic = new Uint32Array(b, 0, 1)[0], v3 = magic === 0x334E5245, v2 = v3 || magic === 0x324E5245;
+      const nC = v3 ? 8 : v2 ? 6 : 4, h = new Uint32Array(b, v2 ? 4 : 0, nC); let o = (v2 ? 4 : 0) + nC * 4;
+      const read = (np, nt) => { const p = new Float32Array(b, o, np * 3); o += np * 12; const t = new Uint32Array(b, o, nt * 3); o += nt * 12; return [p, t]; };
+      const [sp, sf] = read(h[0], h[1]), [ep, ef] = read(h[2], h[3]);
+      const [bp, bf] = v2 ? read(h[4], h[5]) : [new Float32Array(0), new Uint32Array(0)];
+      const [op, of] = v3 ? read(h[6], h[7]) : [new Float32Array(0), new Uint32Array(0)];
+      return { sp, sf, ep, ef, bp, bf, op, of };
+    } catch (e) { return null; }
+  }
+  const REAL = await loadMesh();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const col = n => new THREE.Color(css(n));
+
+  /* ---------- coordinates: SimNIBS ernie (mm, RAS) -> three (y up, face toward +z) ---------- */
+  const E = (x, y, z) => new THREE.Vector3(-x, z, y);
+  // Electrode centres from results/ti_boost_fields.json (main run; neck = as-wired horizontal right-posterior placement)
+  const ELEC = {
+    pulse: [E(35.2, 95.3, 7.2), E(35.2, 95.3, -28.8)],          // supra-orbital, infra-orbital
+    front: [E(57.2, 90.3, -10.8), E(17.2, 95.3, -10.8)],        // temporal (anode), nasal (cathode)
+    neck:  [E(49.3, -50.5, -106.6), E(9.5, -76.1, -108.0)],     // lateral (anode), medial (cathode)
+  };
+  const EYE_R = E(35.2, 90.3, -10.8), EYE_L = E(-35.2, 90.3, -10.8);
+
+  /* ---------- renderer / scene ---------- */
+  const canvas = document.getElementById('stage');
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (e) { document.getElementById('fallback').style.display = 'grid'; return; }
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 1, 1, 3000);
+  const root = new THREE.Group(); scene.add(root);
+  root.position.set(0, 20, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(200, 300, 400); scene.add(dl);
+
+  /* ---------- schematic head (deformed sphere) + neck ---------- */
+  const C = new THREE.Vector3(0, 15, 0);                  // ernie (0, 0, 15) -> three
+  const g = (d, s) => Math.exp(-d * d / (2 * s * s));
+  function headGeometry(seg) {
+    const geo = new THREE.SphereGeometry(1, seg, Math.round(seg * 0.75));
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      // unit sphere in ernie-like axes: ex (right), ey (front), ez (up)
+      const ux = -p.getX(i), uz = p.getY(i), uy = p.getZ(i);
+      let ex = ux * 74, ey = uy * (uy > 0 ? 108 : 100), ez = uz * 105;
+      const zr = ez;                                                    // relative to centre
+      if (zr < -20) { const k = Math.min(1, (-20 - zr) / 75); ex *= 1 - 0.26 * k; if (ey < 0) ey *= 1 - 0.4 * k; }
+      if (ey > 0) {
+        ey += 22 * g(ex, 8) * g(zr + 40, 15) * (zr < -25 ? 1 : 0.6 + 0.4 * g(zr + 25, 12));  // nose
+        ey += 7 * g(ex, 42) * g(zr + 4, 7);                            // brow ridge
+        ey += 6 * g(Math.abs(ex) - 45, 12) * g(zr + 45, 12);          // cheekbones
+        ey += 5 * g(ex, 16) * g(zr + 70, 6);                          // lips
+        ey -= 12 * g(Math.abs(ex) - 34, 12) * g(zr + 25, 10);          // eye sockets
+        ey += 6 * g(ex, 14) * g(zr + 95, 10);                          // chin
+      }
+      ex += Math.sign(ex) * 9 * g(ey + 5, 9) * g(zr + 25, 14);         // ears
+      const v = E(ex, ey, ez + 15);
+      p.setXYZ(i, v.x, v.y, v.z);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+  function neckGeometry() {
+    const geo = new THREE.CylinderGeometry(1, 1, 1, 48, 12, true);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const ux = p.getX(i), uz = p.getZ(i), t = p.getY(i) + 0.5;      // t: 0 bottom, 1 top
+      const z = -175 + t * 125;                                         // ernie z from -175 to -50
+      const shrink = 1 - 0.15 * Math.max(0, (t - 0.75) / 0.25);
+      const v = E(-ux * 54 * shrink, -16 + uz * 60 * shrink, z);
+      p.setXYZ(i, v.x, v.y, v.z);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+  const fresnel = (c, strength) => new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: c }, uS: { value: strength } },
+    vertexShader: `varying vec3 vN; varying vec3 vV;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+    fragmentShader: `uniform vec3 uCol; uniform float uS; varying vec3 vN; varying vec3 vV;
+      void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.4); gl_FragColor = vec4(uCol * (0.06 + 0.9*f) * uS, 1.0); }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const skinCol = new THREE.Color('#8fb3ff');
+  function meshGeo(pts, faces) {                       // ernie mm -> three coordinates
+    const pos = new Float32Array(pts.length);
+    for (let i = 0; i < pts.length; i += 3) { const v = E(pts[i], pts[i + 1], pts[i + 2]); pos[i] = v.x; pos[i + 1] = v.y; pos[i + 2] = v.z; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setIndex(new THREE.BufferAttribute(faces, 1)); g.computeVertexNormals(); return g;
+  }
+  const headGeo = REAL ? meshGeo(REAL.sp, REAL.sf) : headGeometry(120);
+  const neckGeo = REAL ? headGeo : neckGeometry();      // the ernie scalp already includes the neck
+  const skinMat = REAL
+    ? new THREE.MeshLambertMaterial({ color: 0x9fb8e8, transparent: true, opacity: 0.10, depthWrite: false })
+    : new THREE.MeshPhongMaterial({ color: 0x9fb8e8, transparent: true, opacity: 0.16, shininess: 25, specular: 0x334466, depthWrite: false });
+  const head = new THREE.Mesh(headGeo, fresnel(skinCol, 0.75)), neck = new THREE.Mesh(neckGeo, fresnel(skinCol, 0.65));
+  const headShade = new THREE.Mesh(headGeo, skinMat), neckShade = new THREE.Mesh(neckGeo, skinMat);
+  root.add(headShade, neckShade, head, neck);
+  if (REAL) { neck.visible = false; neckShade.visible = false; }
+  if (REAL && REAL.bf.length) {                         // grey-matter surface
+    const brainGeo = meshGeo(REAL.bp, REAL.bf), brainCol = new THREE.Color('#d7b8ff');
+    root.add(new THREE.Mesh(brainGeo, new THREE.MeshPhongMaterial({ color: 0xb9a3e8, transparent: true, opacity: 0.05, shininess: 10, depthWrite: false, side: THREE.DoubleSide })));
+    root.add(new THREE.Mesh(brainGeo, fresnel(brainCol, 0.22)));
+  }
+  const wire = new THREE.LineSegments(new THREE.WireframeGeometry(REAL ? headGeo : headGeometry(40)), new THREE.LineBasicMaterial({ color: skinCol, transparent: true, opacity: 0.035, depthWrite: false }));
+  if (!REAL) root.add(wire);
+
+  // raycast targets (double-sided, invisible)
+  const rcMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, visible: false });
+  const rcHead = new THREE.Mesh(head.geometry, rcMat), rcNeck = new THREE.Mesh(neck.geometry, rcMat);
+  root.add(rcHead, rcNeck); root.updateMatrixWorld(true);
+  const ray = new THREE.Raycaster();
+  function toSurface(P) {                                  // project a point onto the skin along the outward direction
+    const origin = P.y < -45 ? new THREE.Vector3(0, P.y, -16) : C.clone();
+    const dir = P.clone().sub(origin).normalize();
+    ray.set(origin.clone().add(root.position), dir);
+    const hits = ray.intersectObjects(REAL ? [rcHead] : [rcHead, rcNeck]);
+    const Pw = P.clone().add(root.position);
+    // the skin crossing nearest the target electrode centre
+    const best = hits.reduce((a, h) => (!a || h.point.distanceTo(Pw) < a.point.distanceTo(Pw)) ? h : a, null);
+    const pt = best ? best.point.clone().sub(root.position) : P.clone();
+    return { pt, n: dir };
+  }
+
+  /* ---------- eyes, retina, optic nerves ---------- */
+  function placeEye(target) {
+    const { pt, n } = toSurface(target);
+    return pt.clone().sub(n.clone().multiplyScalar(9));
+  }
+  const eyeMat = new THREE.MeshPhongMaterial({ color: 0xdfe8ff, transparent: true, opacity: 0.22, shininess: 80, depthWrite: false, side: THREE.DoubleSide });
+  let eyeR, eyeL, EYE_RAD = 12;
+  if (REAL) {
+    // eye centres = centroids of the eye-surface vertices on each side (ernie x > 0 is the right eye)
+    const sum = { r: [0, 0, 0, 0], l: [0, 0, 0, 0] };
+    for (let i = 0; i < REAL.ep.length; i += 3) { const k = REAL.ep[i] > 0 ? 'r' : 'l'; sum[k][0] += REAL.ep[i]; sum[k][1] += REAL.ep[i + 1]; sum[k][2] += REAL.ep[i + 2]; sum[k][3]++; }
+    const cen = k => E(sum[k][0] / sum[k][3], sum[k][1] / sum[k][3], sum[k][2] / sum[k][3]);
+    eyeR = cen('r'); eyeL = cen('l');
+    let d = 0, n = 0; for (let i = 0; i < REAL.ep.length; i += 3) if (REAL.ep[i] > 0) { d += E(REAL.ep[i], REAL.ep[i + 1], REAL.ep[i + 2]).distanceTo(eyeR); n++; }
+    EYE_RAD = d / n;
+    root.add(new THREE.Mesh(meshGeo(REAL.ep, REAL.ef), eyeMat));
+  } else {
+    eyeR = placeEye(EYE_R); eyeL = placeEye(EYE_L);
+    for (const c of [eyeR, eyeL]) { const m = new THREE.Mesh(new THREE.SphereGeometry(12, 32, 24), eyeMat); m.position.copy(c); root.add(m); }
+  }
+  const retinaMat = new THREE.MeshBasicMaterial({ color: col('--front'), transparent: true, opacity: 0.5, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+  const retina = new THREE.Mesh(new THREE.SphereGeometry(EYE_RAD + 0.4, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.3), retinaMat);
+  retina.rotation.x = -Math.PI / 2; retina.position.copy(eyeR); root.add(retina);
+  const nerveMat = new THREE.MeshBasicMaterial({ color: 0xe8d9ff, transparent: true, opacity: 0.28, depthWrite: false });
+  let nerveR, nerveL;
+  if (REAL && REAL.of.length) {
+    // Optic nerves, chiasm and tracts reconstructed from MIDA's labels (tags 26, 93, 94): the segmented surface has
+    // gaps where the nerve is thinner than the voxels, so we extract each structure's centre line and real radius
+    // from its vertices and rebuild a continuous tube along a smoothed curve (gaps are interpolated, course is real).
+    const P = REAL.op, n3 = P.length;
+    const V = i => [P[i], P[i + 1], P[i + 2]];                                   // ernie mm
+    let cx = 0, cy = 0, cz = 0, cn = 0;                                          // chiasm: vertices near the midline
+    for (let i = 0; i < n3; i += 3) if (Math.abs(P[i]) < 4) { cx += P[i]; cy += P[i + 1]; cz += P[i + 2]; cn++; }
+    const C = [cx / cn, cy / cn, cz / cn];
+    const binLine = (keep, from, step, nb) => {                                  // centroids binned by distance
+      const B = Array.from({ length: nb }, () => [0, 0, 0, 0]);
+      for (let i = 0; i < n3; i += 3) {
+        const v = V(i); if (!keep(v)) continue;
+        const k = Math.floor(Math.hypot(v[0] - from[0], v[1] - from[1], v[2] - from[2]) / step);
+        if (k < nb) { B[k][0] += v[0]; B[k][1] += v[1]; B[k][2] += v[2]; B[k][3]++; }
+      }
+      return B.filter(b => b[3] > 6).map(b => [b[0] / b[3], b[1] / b[3], b[2] / b[3]]);
+    };
+    const smooth = pts => pts.map((p, i) => i === 0 || i === pts.length - 1 ? p
+      : p.map((_, j) => (pts[i - 1][j] + 2 * p[j] + pts[i + 1][j]) / 4));
+    const backOf = c => [-c.x, c.z - EYE_RAD, c.y];                              // back of the globe (three -> ernie)
+    const nerve = side => {                                                      // eye -> chiasm
+      const sgn = side ? -1 : 1, back = backOf(side ? eyeL : eyeR);
+      return smooth([back, ...binLine(v => sgn * v[0] > 4 && v[1] > C[1] + 2, back, 6, 10)]);
+    };
+    const tract = side => {                                                      // chiasm -> back
+      const sgn = side ? -1 : 1;
+      return smooth(binLine(v => sgn * v[0] > 3 && v[1] < C[1] - 2, C, 4, 8));
+    };
+    const toCurve = pts => new THREE.CatmullRomCurve3(pts.map(p => E(...p)), false, 'centripetal');
+    const nR = nerve(0), nL = nerve(1), tR = tract(0), tL = tract(1);
+    // measured radius: median distance of the structure's vertices to its centre line
+    const radius = (pts, keep) => {
+      const cur = toCurve(pts), S = cur.getSpacedPoints(120).map(q => [-q.x, q.z, q.y]), d = [];
+      for (let i = 0; i < n3; i += 3) { const v = V(i); if (!keep(v)) continue;
+        let m = 1e9; for (const s of S) m = Math.min(m, Math.hypot(v[0] - s[0], v[1] - s[1], v[2] - s[2])); if (m < 6) d.push(m); }
+      d.sort((a, b) => a - b); return d.length ? Math.min(3, Math.max(1.2, d[d.length >> 1])) : 2;
+    };
+    const rN = radius([...nR, C], v => Math.abs(v[0]) > 4 && v[1] > C[1] + 2);
+    const rT = radius([C, ...tR], v => Math.abs(v[0]) > 3 && v[1] < C[1] - 2);
+    const opticMat = new THREE.MeshLambertMaterial({ color: 0xf1e4ff, emissive: 0x6b4fa8, emissiveIntensity: 0.4, transparent: true, opacity: 0.8, depthWrite: false });
+    // fibres cross at the chiasm: each nerve continues into the opposite tract, giving the X
+    for (const [nv, tr] of [[nR, tL], [nL, tR]]) {
+      const pathN = toCurve([...nv, C]), pathT = toCurve([C, ...tr]);
+      root.add(new THREE.Mesh(new THREE.TubeGeometry(pathN, 80, rN, 14), opticMat));
+      root.add(new THREE.Mesh(new THREE.TubeGeometry(pathT, 50, rT, 12), opticMat));
+    }
+    const chiasmBlob = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), opticMat);
+    chiasmBlob.scale.set(rN * 2.4, rN * 1.1, rN * 1.8); chiasmBlob.position.copy(E(...C)); root.add(chiasmBlob);
+    nerveR = toCurve([...nR, C]); nerveL = toCurve([...nL, C]);
+  } else {
+    const chiasm = E(0, 30, -18);
+    nerveR = new THREE.CatmullRomCurve3([eyeR.clone().add(new THREE.Vector3(0, 0, -(EYE_RAD - 1))), E(28, 62, -13), E(15, 45, -16), chiasm]);
+    nerveL = new THREE.CatmullRomCurve3([eyeL.clone().add(new THREE.Vector3(0, 0, -(EYE_RAD - 1))), E(-28, 62, -13), E(-15, 45, -16), chiasm]);
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(nerveR, 60, 2.2, 10), nerveMat), new THREE.Mesh(new THREE.TubeGeometry(nerveL, 60, 2.2, 10), nerveMat));
+  }
+
+  /* ---------- glow sprite texture ---------- */
+  function glowTex() {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+    const gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c);
+  }
+  const GT = glowTex();
+  const sprite = (color, size, op = 1) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GT, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
+  // Orbital apex: 27-33 mm along the optic-nerve path from the back of the eye (envelope 53-74% deep in the model)
+  const nerveLen = nerveR.getLength();
+  const apexPt = nerveR.getPointAt(Math.min(1, 30 / nerveLen));
+  const overlapPt = apexPt;
+  const apexGlow = sprite(0xffffff, 40, 0.6); apexGlow.position.copy(apexPt); root.add(apexGlow);
+  const retinaGlow = sprite(col('--front'), 26, 0.4); retinaGlow.position.copy(eyeR.clone().add(new THREE.Vector3(0, 0, -(EYE_RAD - 1)))); root.add(retinaGlow);
+  const DEPTH = { retina: 0.07, apex: 0.64 };
+
+  /* ---------- electrodes, wires, current paths ---------- */
+  const pairs = {};
+  const PAIR_COL = { pulse: '--pulse', front: '--front', neck: '--neck' };
+  for (const key of ['pulse', 'front', 'neck']) {
+    const group = new THREE.Group(); root.add(group);
+    const color = col(PAIR_COL[key]);
+    const pts = ELEC[key].map(P => toSurface(P));
+    const discs = pts.map(({ pt, n }, i) => {
+      const d = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 1.6, 32), new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.35, shininess: 60 }));
+      d.position.copy(pt.clone().add(n.clone().multiplyScalar(0.8)));
+      d.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+      group.add(d);
+      const halo = sprite(color, 26, 0.5); halo.position.copy(d.position); group.add(halo); d.userData.halo = halo;
+      return d;
+    });
+    // current path through tissue: anode -> (pulled inward) -> cathode
+    const A = pts[0].pt, B = pts[1].pt, mid = A.clone().add(B).multiplyScalar(0.5);
+    const inward = key === 'neck' ? new THREE.Vector3(0, mid.y, -16).sub(mid).normalize().multiplyScalar(14)
+                                   : eyeR.clone().add(new THREE.Vector3(0, 0, -10)).sub(mid).multiplyScalar(0.55);
+    const paths = [new THREE.QuadraticBezierCurve3(A, mid.clone().add(inward), B)];
+    // spread: a few parallel paths
+    for (const s of [-1, 1]) {
+      const off = new THREE.Vector3().crossVectors(B.clone().sub(A), inward).normalize().multiplyScalar(s * 6);
+      paths.push(new THREE.QuadraticBezierCurve3(A, mid.clone().add(inward).add(off), B));
+    }
+    // neck: a faint long-range path reaching the orbit
+    const longPaths = [];
+    if (key === 'neck') {
+      longPaths.push(new THREE.CatmullRomCurve3([A, E(30, -30, -80), E(25, 20, -45), overlapPt.clone(), E(15, 40, -40), E(8, -40, -85), B]));
+    }
+    // particles
+    const N = key === 'neck' ? 70 : 55, NL = 0;
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((N + NL) * 3), 3));
+    const pmat = new THREE.PointsMaterial({ color, size: key === 'pulse' ? 3.6 : 2.6, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, map: GT });
+    const pts3 = new THREE.Points(geo, pmat); group.add(pts3);
+    const seeds = Array.from({ length: N + NL }, (_, i) => ({ u: Math.random(), path: i < N ? i % paths.length : -1, sp: 0.18 + Math.random() * 0.12 }));
+    let longCloud = null;
+    if (longPaths.length) {
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(30 * 3), 3));
+      const lm = new THREE.PointsMaterial({ color, size: 2, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, map: GT });
+      longCloud = { geo: lg, mat: lm, seeds: Array.from({ length: 30 }, () => ({ u: Math.random() })) };
+      group.add(new THREE.Points(lg, lm));
+    }
+    seeds.forEach(s => s.u0 = s.u);
+    pairs[key] = { group, discs, paths, longPaths, longCloud, geo, pmat, seeds, N, color };
+  }
+
+  /* ---------- HTML labels ---------- */
+  const labels = [];
+  function addLabel(text, getPos, colorVar, o = {}) {
+    const el = document.createElement('div'); el.className = o.sign ? 'label sign' : 'label'; el.textContent = text;
+    if (colorVar) { el.style.borderColor = css(colorVar); if (o.sign) el.style.color = css(colorVar); }
+    document.body.appendChild(el); labels.push({ el, getPos, dx: o.dx || 0, dy: o.dy || 0 });
+  }
+  addLabel('pulse ±', () => pairs.pulse.discs[0].position, '--pulse');
+  addLabel('front TI · 1000 Hz', () => pairs.front.discs[0].position, '--front');
+  addLabel('neck TI · 1005 Hz', () => pairs.neck.discs[0].position, '--neck');
+  addLabel('retina', () => eyeR.clone().add(new THREE.Vector3(0, -14, -6)));
+  addLabel('optic nerve', () => nerveR.getPoint(0.55));
+
+  /* ---------- controls: drag-rotate, zoom, views ---------- */
+  let yaw = -0.5, pitch = 0.06, dist = 600, spin = !reduce, cond = 'peaks';
+  const target = { yaw, pitch };
+  let drag = null;
+  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); setSpin(false); });
+  canvas.addEventListener('pointermove', e => { if (!drag) return; target.yaw += (e.clientX - drag.x) * 0.008; target.pitch = Math.max(-1.2, Math.min(1.2, target.pitch + (e.clientY - drag.y) * 0.006)); drag = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointerup', () => drag = null);
+  canvas.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(300, Math.min(1100, dist * (1 + Math.sign(e.deltaY) * 0.08))); }, { passive: false });
+  const spinBtn = document.getElementById('spin');
+  function setSpin(v) { spin = v; spinBtn.setAttribute('aria-pressed', v); }
+  spinBtn.addEventListener('click', () => setSpin(!spin));
+  const labelsBtn = document.getElementById('labelsBtn');
+  labelsBtn.addEventListener('click', () => { const on = labelsBtn.getAttribute('aria-pressed') !== 'true'; labelsBtn.setAttribute('aria-pressed', on); document.body.classList.toggle('nolabels', !on); });
+  const resultsBtn = document.getElementById('resultsBtn'), detBox = document.getElementById('det');
+  resultsBtn.addEventListener('click', () => { const on = resultsBtn.getAttribute('aria-pressed') !== 'true'; resultsBtn.setAttribute('aria-pressed', on); detBox.style.display = on ? '' : 'none'; });
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+    setSpin(false); target.pitch = 0.05;
+    const v = b.dataset.view; target.yaw = v === 'front' ? 0 : v === 'side' ? -Math.PI / 2 : Math.PI;
+    // shortest way round
+    while (target.yaw - yaw > Math.PI) target.yaw -= 2 * Math.PI; while (yaw - target.yaw > Math.PI) target.yaw += 2 * Math.PI;
+  }));
+  document.querySelectorAll('[data-cond]').forEach(b => b.addEventListener('click', () => {
+    cond = b.dataset.cond; document.querySelectorAll('[data-cond]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    detAnim = performance.now();
+  }));
+  document.querySelectorAll('[data-pair]').forEach(b => b.addEventListener('click', () => {
+    const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); pairs[b.dataset.pair].group.visible = on;
+  }));
+
+  /* ---------- timing: one 1 s stimulus, slowed 5x, then a short gap ---------- */
+  const SLOW = 5, CYCLE = 1.3;                                   // stimulus-seconds per loop (1 s on + 0.3 s off)
+  const PEAKS = [0.2, 0.4, 0.6, 0.8], TROUGHS = [0.3, 0.5, 0.7, 0.9], PW = 0.02;
+  const pulseTimes = () => cond === 'peaks' ? PEAKS : TROUGHS;   // pulses alone, troughs and control: 300/500/700/900 ms
+  // envelope relative to its maximum, for depth r = weaker/stronger field (fields parallel; as wired, 'peak' = local max)
+  function env(t, r) {
+    if (t > 1 || cond === 'alone') return 0;
+    if (cond === 'control') return 1;                           // both carriers at 1000 Hz: constant, equal to the peak amplitude
+    return Math.sqrt(1 + r * r + 2 * r * Math.cos(2 * Math.PI * 5 * t)) / (1 + r);
+  }
+  const pulseOn = t => t <= 1 && pulseTimes().some(p => t >= p && t < p + PW * 4);   // shown 4x longer so it's visible
+
+  /* ---------- detection results (results/paper_exp2.json, Experiment 2) ---------- */
+  // d' vs pooled catch trials; per participant in the order [pulses alone, peaks, troughs, unmodulated]
+  const DET = {
+    pooled: [1.479, 1.735, 1.539, 1.471],
+    subj: [[1.71, 2.22, 1.87, 1.76], [1.42, 1.51, 1.42, 1.61], [0.84, 0.89, 0.74, 0.64], [1.22, 1.56, 1.56, 1.27],
+           [0.84, 0.95, 0.78, 0.57], [0.9, 1.32, 0.64, 0.9], [-0.19, 0.5, 0.42, -0.02]],
+    gain: [null, [1.133, 1.062, 1.241], [1.029, 0.959, 1.101], [0.996, 0.943, 1.049]],   // current-equivalent vs pulses alone
+    names: ['alone', 'peak', 'trough', 'ctrl'],
+  };
+  const COND_IX = { alone: 0, peaks: 1, troughs: 2, control: 3 };
+  let detAnim = -1e9;
+  const detCv = document.getElementById('detCv'), dctx = detCv.getContext('2d'), detTxt = document.getElementById('detTxt');
+  const pct = f => { const v = Math.round((f - 1) * 100); return (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v) + '%'; };
+  let lastTxt = '';
+  function drawDet(now) {
+    if (detBox.style.display === 'none') return;
+    const d = devicePixelRatio || 1, w = detCv.clientWidth, h = detCv.clientHeight;
+    if (!w) return;
+    if (detCv.width !== w * d || detCv.height !== h * d) { detCv.width = w * d; detCv.height = h * d; }
+    dctx.setTransform(d, 0, 0, d, 0, 0); dctx.clearRect(0, 0, w, h);
+    const ci = COND_IX[cond], k = Math.min(1, (now - detAnim) / 650), ease = 1 - Math.pow(1 - k, 3);
+    const lo = -0.3, hi = 2.4, top = 14, bot = h - 18, Y = v => bot - (v - lo) / (hi - lo) * (bot - top);
+    dctx.font = '10px JetBrains Mono, monospace';
+    // left: pooled d' per condition
+    const bw = (w * 0.46) / 4;
+    DET.pooled.forEach((v, i) => {
+      const x = 4 + i * bw, on = i === ci;
+      dctx.fillStyle = i === 0 ? css('--muted') : css('--front'); dctx.globalAlpha = on ? 0.95 : 0.28;
+      dctx.fillRect(x + 3, Y(v), bw - 6, Y(0) - Y(v)); dctx.globalAlpha = 1;
+      dctx.fillStyle = on ? css('--head') : css('--muted');
+      dctx.textAlign = 'center'; dctx.fillText(v.toFixed(2), x + bw / 2, Y(v) - 3); dctx.fillText(DET.names[i], x + bw / 2, h - 5); dctx.textAlign = 'left';
+    });
+    dctx.fillStyle = css('--muted'); dctx.fillText("d′", 4, 10);
+    // right: slope chart, each participant from pulses alone to the selected condition
+    const xa = w * 0.56, xb = w - 14;
+    dctx.strokeStyle = css('--border'); dctx.beginPath(); dctx.moveTo(xa, top); dctx.lineTo(xa, bot); dctx.moveTo(xb, top); dctx.lineTo(xb, bot); dctx.stroke();
+    dctx.fillStyle = css('--muted'); dctx.fillText('alone', xa - 14, h - 5); dctx.fillText(DET.names[ci], xb - 30, h - 5);
+    let up = 0, down = 0;
+    DET.subj.forEach(sv => {
+      const a = sv[0], b = sv[ci], e = a + (b - a) * ease, diff = b - a;
+      if (ci) { if (diff > 0.005) up++; else if (diff < -0.005) down++; }
+      const c = !ci || Math.abs(diff) <= 0.005 ? css('--muted') : diff > 0 ? css('--front') : '#ff7a90';
+      dctx.strokeStyle = c; dctx.lineWidth = 1.5; dctx.beginPath(); dctx.moveTo(xa, Y(a)); dctx.lineTo(xa + (xb - xa) * ease, Y(e)); dctx.stroke();
+      dctx.fillStyle = c; dctx.beginPath(); dctx.arc(xa, Y(a), 2.4, 0, 7); dctx.fill();
+      dctx.beginPath(); dctx.arc(xa + (xb - xa) * ease, Y(e), 2.6, 0, 7); dctx.fill();
+    });
+    // pooled line
+    const pa = DET.pooled[0], pb = DET.pooled[ci], pe = pa + (pb - pa) * ease;
+    dctx.strokeStyle = css('--head'); dctx.lineWidth = 2.6; dctx.beginPath(); dctx.moveTo(xa, Y(pa)); dctx.lineTo(xa + (xb - xa) * ease, Y(pe)); dctx.stroke();
+    // text
+    let txt;
+    if (!ci) txt = 'Baseline: <b>pulses alone</b>. Pick a condition above to compare the same pulses.';
+    else {
+      const g = DET.gain[ci], ties = 7 - up - down;
+      const what = ci === 1 ? 'on the envelope <b>peaks</b>' : ci === 2 ? 'on the <b>troughs</b>' : 'with the <b>unmodulated</b> kHz carrier';
+      txt = `Same pulses ${what}: d′ higher in <b>${up}/7</b> people${ties ? ` (${ties} tie)` : ''}, worth <b>${pct(g[0])}</b> pulse current (95% CI ${pct(g[1])} to ${pct(g[2])}).`;
+      if (ci === 3) txt += ' Same kHz amplitude as peaks, no beat: no gain.';
+    }
+    if (txt !== lastTxt) { detTxt.innerHTML = txt; lastTxt = txt; }
+  }
+
+  /* ---------- HUD: summed carriers + envelope + biphasic pulses, with a zoom lens at the playhead ---------- */
+  const hud = document.getElementById('hud'), hctx = hud.getContext('2d');
+  let hudSite = 'apex';
+  document.querySelectorAll('[data-site]').forEach(b => b.addEventListener('click', () => {
+    hudSite = b.dataset.site; document.querySelectorAll('[data-site]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  }));
+  // field in tissue = stronger carrier (amplitude 1) + weaker carrier (amplitude r); r = local modulation depth
+  function field(t) {
+    if (t > 1 || cond === 'alone') return 0;
+    const r = DEPTH[hudSite], f2 = cond === 'control' ? 1000 : 1005;
+    return Math.sin(2 * Math.PI * 1000 * t) + r * Math.sin(2 * Math.PI * f2 * t);
+  }
+  function pulseAt(t) {                                         // biphasic: 10 ms negative, then 10 ms positive
+    for (const p of pulseTimes()) { const d = t - p; if (d >= 0 && d < PW) return d < PW / 2 ? -1 : 1; }
+    return 0;
+  }
+  let hudCache = null;
+  function drawHud(t) {
+    const d = devicePixelRatio || 1, w = hud.clientWidth, h = hud.clientHeight;
+    if (hud.width !== w * d) { hud.width = w * d; hud.height = h * d; hudCache = null; }
+    hctx.setTransform(d, 0, 0, d, 0, 0); hctx.clearRect(0, 0, w, h);
+    const lensW = Math.min(250, w * 0.26), L0 = 64, L1 = w - lensW - 18;            // main strip [L0, L1]
+    const X = s => L0 + (s / CYCLE) * (L1 - L0);
+    const fy = h * 0.47, fa = h * 0.17, py = h * 0.84, pa = h * 0.09;               // field row, pulse row
+    const r = DEPTH[hudSite], peak = cond === 'alone' ? 0 : 1 + r;
+    hctx.font = '10.5px JetBrains Mono, monospace'; hctx.fillStyle = css('--muted');
+    hctx.fillText('field', 4, fy - 4); hctx.fillText('1000+1005', 4, fy + 9); hctx.fillText('Hz', 4, fy + 21);
+    hctx.fillText('pulse', 4, py + 4);
+    // field: exact min/max of the summed carriers in every pixel column (the 1 kHz oscillation renders as a band)
+    const key = cond + hudSite + w;
+    if (!hudCache || hudCache.key !== key) {
+      const cols = Math.ceil(L1 - L0), mn = new Float32Array(cols), mx = new Float32Array(cols);
+      for (let c = 0; c < cols; c++) {
+        const t0 = c / cols * CYCLE, t1 = (c + 1) / cols * CYCLE; let a = 1e9, b = -1e9;
+        for (let k = 0; k <= 24; k++) { const v = field(t0 + (t1 - t0) * k / 24); if (v < a) a = v; if (v > b) b = v; }
+        mn[c] = a; mx[c] = b;
+      }
+      hudCache = { key, mn, mx, cols };
+    }
+    const sc = fa / 2;                                                              // amplitude 2 -> fa
+    hctx.strokeStyle = css('--front'); hctx.globalAlpha = 0.55; hctx.lineWidth = 1; hctx.beginPath();
+    for (let c = 0; c < hudCache.cols; c++) { const x = L0 + c + 0.5; hctx.moveTo(x, fy - hudCache.mx[c] * sc); hctx.lineTo(x, fy - hudCache.mn[c] * sc); }
+    hctx.stroke(); hctx.globalAlpha = 1;
+    // envelope (dashed): |E1 + E2| over the beat
+    if (cond !== 'alone') {
+      hctx.setLineDash([4, 3]); hctx.strokeStyle = css('--head'); hctx.lineWidth = 1.4;
+      for (const sg of [1, -1]) { hctx.beginPath(); for (let i = 0; i <= 260; i++) { const tt = i / 260; const e = env(tt, r) * peak; i ? hctx.lineTo(X(tt), fy - sg * e * sc) : hctx.moveTo(X(tt), fy - sg * e * sc); } hctx.stroke(); }
+      hctx.setLineDash([]);
+    }
+    // biphasic pulses, to scale (negative phase first)
+    hctx.strokeStyle = css('--pulse'); hctx.lineWidth = 1.8; hctx.beginPath(); hctx.moveTo(L0, py);
+    for (let c = 0; c <= L1 - L0; c++) { const tt = c / (L1 - L0) * CYCLE, v = pulseAt(tt); hctx.lineTo(L0 + c, py - v * pa); }
+    hctx.stroke();
+    // playhead + zoom window marker
+    const zoom = 0.02;                                                              // 20 ms lens
+    hctx.fillStyle = css('--head'); hctx.globalAlpha = 0.08; hctx.fillRect(X(t - zoom / 2), 4, Math.max(2, X(zoom) - X(0)), h - 8); hctx.globalAlpha = 0.7;
+    hctx.strokeStyle = css('--head'); hctx.beginPath(); hctx.moveTo(X(t), 4); hctx.lineTo(X(t), h - 4); hctx.stroke(); hctx.globalAlpha = 1;
+    // zoom lens: the real 1 kHz carriers and the pulse over 20 ms around the playhead
+    const lx = w - lensW - 6, ly = 6, lh = h - 12;
+    hctx.strokeStyle = css('--border'); hctx.strokeRect(lx, ly, lensW, lh);
+    hctx.fillStyle = css('--muted'); hctx.fillText(`zoom · ${Math.round(zoom * 1000)} ms`, lx + 6, ly + 12);
+    hctx.fillText(t <= 1 ? `t = ${Math.round(t * 1000)} ms` : 'rest', lx + lensW - 78, ly + 12);
+    const lfy = ly + lh * 0.42, lsc = lh * 0.15, lpy = ly + lh * 0.84, lpa = lh * 0.1;
+    hctx.strokeStyle = css('--front'); hctx.lineWidth = 1.3; hctx.beginPath();
+    for (let i = 0; i <= 400; i++) { const tt = t - zoom / 2 + zoom * i / 400, x = lx + 4 + (lensW - 8) * i / 400, y = lfy - field(tt) * lsc; i ? hctx.lineTo(x, y) : hctx.moveTo(x, y); }
+    hctx.stroke();
+    hctx.strokeStyle = css('--pulse'); hctx.lineWidth = 1.8; hctx.beginPath();
+    for (let i = 0; i <= 400; i++) { const tt = t - zoom / 2 + zoom * i / 400, x = lx + 4 + (lensW - 8) * i / 400, y = lpy - pulseAt(tt) * lpa; i ? hctx.lineTo(x, y) : hctx.moveTo(x, y); }
+    hctx.stroke();
+  }
+
+
+  /* ---------- animate ---------- */
+  function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  addEventListener('resize', resize); resize();
+  let last = performance.now(), st = 0;
+  function frame(now) {
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+    if (!reduce) st = (st + dt / SLOW) % CYCLE; else st = 0.2;
+    if (spin) target.yaw += dt * 0.25;
+    yaw += (target.yaw - yaw) * 0.08; pitch += (target.pitch - pitch) * 0.08;
+    camera.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, 40 + Math.sin(pitch) * dist, Math.cos(yaw) * Math.cos(pitch) * dist);
+    camera.lookAt(0, 0, 0);
+
+    const carriers = st <= 1 && cond !== 'alone', pOn = pulseOn(st);
+    const eA = env(st, DEPTH.apex), eR = env(st, DEPTH.retina);
+    // brightness tracks the envelope relative to its own range: deep at the apex, nearly flat at the retina
+    const swing = (e, r) => cond === 'control' ? 1 : (e - (1 - r) / (1 + r)) / (1 - (1 - r) / (1 + r));   // 0 at min, 1 at max
+    const nA = carriers ? (DEPTH.apex * swing(eA, DEPTH.apex) + (1 - DEPTH.apex)) : 0;            // absolute: dips to 1-depth
+    const nR = carriers ? (DEPTH.retina * swing(eR, DEPTH.retina) + (1 - DEPTH.retina)) : 0;
+    apexGlow.material.opacity = carriers ? 0.08 + 0.85 * Math.pow(nA, 4) : 0.02;
+    apexGlow.scale.setScalar(20 + 30 * nA);
+    retinaGlow.material.opacity = carriers ? 0.1 + 0.5 * Math.pow(nR, 4) : 0.03;
+    retinaMat.opacity = carriers ? 0.12 + 0.35 * Math.pow(nR, 4) : 0.08;
+    const tReal = now / 1000;
+    // biphasic pulse: phase 1 (negative) then phase 2 (positive)
+    const pPhase = (() => { for (const p of pulseTimes()) { const d = st - p; if (d >= 0 && d < PW * 4) return d < PW * 2 ? -1 : 1; } return 0; })();
+    // particles
+    for (const key in pairs) {
+      const P = pairs[key], arr = P.geo.attributes.position.array;
+      const active = key === 'pulse' ? pOn : carriers;
+      const speed = key === 'pulse' ? 2.2 : 1;
+      P.pmat.opacity = active ? (key === 'pulse' ? 1 : 0.9) : 0.04;
+      P.seeds.forEach((s, i) => {
+        if (key === 'pulse') { if (active && !reduce) s.u = Math.min(0.98, Math.max(0.02, s.u + pPhase * dt * 0.9)); }
+        else s.u = s.u0 + (active && !reduce ? 0.07 * Math.sin(2 * Math.PI * 1.4 * tReal + s.u0 * 0.6) : 0);   // alternating current, drawn slowed
+        const curve = s.path >= 0 ? P.paths[s.path] : P.longPaths[0];
+        const v = curve.getPoint(Math.min(1, Math.max(0, s.u)));
+        arr[i * 3] = v.x; arr[i * 3 + 1] = v.y; arr[i * 3 + 2] = v.z;
+      });
+      P.geo.attributes.position.needsUpdate = true;
+      if (P.longCloud) {
+        const la = P.longCloud.geo.attributes.position.array;
+        P.longCloud.seeds.forEach((s, i) => { const v = P.longPaths[0].getPoint(Math.min(1, Math.max(0, s.u + (carriers && !reduce ? 0.03 * Math.sin(2 * Math.PI * 1.4 * tReal) : 0)))); la[i * 3] = v.x; la[i * 3 + 1] = v.y; la[i * 3 + 2] = v.z; });
+        P.longCloud.geo.attributes.position.needsUpdate = true; P.longCloud.mat.opacity = carriers ? 0.3 : 0.03;
+      }
+      P.discs.forEach(d => { d.material.emissiveIntensity = active ? (key === 'pulse' ? 1.2 : 0.6) : 0.15; d.userData.halo.material.opacity = active ? (key === 'pulse' ? 0.9 : 0.45) : 0.08; });
+    }
+    renderer.render(scene, camera);
+    // labels
+    for (const L of labels) {
+      const p = L.getPos().clone().add(root.position).project(camera);
+      const vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1;
+      L.el.style.display = vis ? 'block' : 'none';
+      L.el.style.left = ((p.x + 1) / 2 * innerWidth + L.dx) + 'px'; L.el.style.top = ((1 - p.y) / 2 * innerHeight + L.dy) + 'px';
+    }
+    drawHud(st); drawDet(now);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

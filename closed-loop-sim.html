@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timing Pulses to a Beat</title>
+<meta name="description" content="Interactive explainer: temporal-interference beats, pulse timing and closed-loop control for wearable transorbital phosphene stimulation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b16; --bg-2: #0c1222; --panel: rgba(120,150,255,.06); --panel-2: rgba(120,150,255,.10);
+    --border: rgba(130,160,255,.16); --text: #b9c3d9; --muted: #7884a0; --head: #eef2ff;
+    --c1: #2ee6d6; --c2: #6a8cff; --c3: #a77bff; --warm: #f5c86b; --bad: #ff7a90;
+    --grad: linear-gradient(90deg, var(--c1), var(--c2) 50%, var(--c3));
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7fb; --bg-2: #eceff7; --panel: rgba(40,60,140,.05); --panel-2: rgba(40,60,140,.09);
+    --border: rgba(40,60,140,.15); --text: #3a4560; --muted: #6a7590; --head: #0e1630;
+    --c1: #0aa89b; --c2: #3a5fe0; --c3: #7a4fe0; --warm: #b7811a; --bad: #d23a57;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f6f7fb; --bg-2: #eceff7; --panel: rgba(40,60,140,.05); --panel-2: rgba(40,60,140,.09);
+      --border: rgba(40,60,140,.15); --text: #3a4560; --muted: #6a7590; --head: #0e1630;
+      --c1: #0aa89b; --c2: #3a5fe0; --c3: #7a4fe0; --warm: #b7811a; --bad: #d23a57;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--c1); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header { padding: 28px 0 8px; }
+  .back { font-size: 14px; color: var(--muted); text-decoration: none; }
+  .back:hover { color: var(--c1); }
+  h1 { font-family: "Space Grotesk", sans-serif; font-size: clamp(30px, 5vw, 46px); line-height: 1.1; margin: 22px 0 14px; color: var(--head); }
+  .lede { font-size: 18px; max-width: 720px; }
+  .paper { margin: 18px 0 0; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); font-size: 14px; }
+  .paper b { color: var(--head); }
+  section { padding: 40px 0 8px; }
+  h2 { font-family: "Space Grotesk"; color: var(--head); font-size: 26px; margin: 0 0 6px; }
+  h2 small { font-family: "JetBrains Mono"; font-size: 12px; color: var(--c1); letter-spacing: .15em; display: block; margin-bottom: 6px; }
+  p { margin: 0 0 14px; }
+  .card { border: 1px solid var(--border); border-radius: 16px; background: var(--panel); padding: 16px; margin: 18px 0; }
+  canvas { width: 100%; display: block; border-radius: 10px; background: var(--bg-2); }
+  #loopCv { height: 300px; }
+  @media (max-width: 560px) { #loopCv { height: 240px; } }
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; margin-top: 14px; font-size: 14px; }
+  .controls label { display: flex; align-items: center; gap: 10px; }
+  input[type=range] { accent-color: var(--c1); width: 170px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .seg button { background: transparent; color: var(--text); border: 0; border-right: 1px solid var(--border); padding: 7px 12px; font: 500 13.5px "Inter", sans-serif; cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--c1) 18%, transparent); color: var(--head); }
+  .btn { background: transparent; color: var(--head); border: 1px solid var(--border); border-radius: 9px; padding: 7px 14px; font: 600 13.5px "Inter", sans-serif; cursor: pointer; }
+  .btn:hover { border-color: var(--c1); }
+  .readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+  .readout div { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); }
+  .readout b { display: block; font-family: "Space Grotesk"; font-size: 24px; color: var(--head); line-height: 1.2; }
+  .readout span { font-size: 12px; color: var(--muted); }
+  .note { font-size: 13px; color: var(--muted); }
+  h3.sub { font-family: "Space Grotesk"; color: var(--head); font-size: 17px; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+  h3.sub .note { font-family: "Inter"; font-weight: 400; }
+  .pair { display: grid; gap: 18px; }
+  @media (min-width: 760px) { .pair { grid-template-columns: 1fr 1fr; } }
+  .pt { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  #psyA, #disc { height: 240px; }
+  .callout { border-left: 3px solid var(--c3); padding: 4px 0 4px 14px; margin: 16px 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  footer { padding: 40px 0 56px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 40px; }
+</style>
+<script>
+  // Always open at the top (the viewer can carry over the previous page's scroll position)
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  const toTop = () => { window.scrollTo(0, 0); const h = document.querySelector('header'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'start' }); };
+  toTop(); addEventListener('DOMContentLoaded', toTop); addEventListener('load', () => { toTop(); setTimeout(toTop, 150); });
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="index.html#work">← Back to portfolio</a>
+    <h1><span class="grad">Timing pulses to a beat</span><br>a hands-on explainer</h1>
+    <p class="lede">Can the <em>timing</em> of a small electrical pulse, rather than its strength, make it easier to see a phosphene, a flash of light produced by stimulating the eye? Play with the three ideas behind our study below.</p>
+    <div class="paper"><b>Based on:</b> Re, D., Ibrahim, R., &amp; Hanein, Y. <em>Pulses timed to temporal-interference envelope peaks increase phosphene detection with wearable dry-printed transorbital electrodes.</em> Manuscript in preparation. Preliminary results: <a href="https://doi.org/10.1109/EMBC58623.2025.11254509">IEEE EMBC 2025</a>.<br>
+    <span class="note">Everything on this page is a teaching simulation with made-up parameters. It shows the ideas, not our data or results.</span></div>
+  </header>
+
+  <section id="setup">
+    <h2><small>00</small>The setup in 3D</h2>
+    <p>Three pairs of electrodes, all dry-printed. A <b>pulse pair</b> above and below the right eye delivers brief biphasic pulses. A <b>front pair</b> beside the eye carries a 1000 Hz current, and a <b>neck pair</b> on the right side of the back of the neck carries 1005 Hz. Where the two carriers overlap they beat at 5 Hz, and the pulses are timed to that beat. Drag to rotate, and switch conditions at the top.</p>
+    <div class="card" style="padding:0;overflow:hidden">
+      <iframe src="setup-3d.html" title="3D view of the stimulation montage" loading="lazy" style="width:100%;height:560px;border:0;display:block"></iframe>
+    </div>
+    <p class="note"><a href="setup-3d.html">Open the 3D view full screen →</a> Head: the MIDA model (scalp, eyes, brain, and the real optic nerves, chiasm and tracts). Electrode positions come from our SimNIBS model on <em>ernie</em>, transferred by aligning the eyes; current paths are illustrative.</p>
+  </section>
+
+  <!-- ================= 1 + 2 ================= -->
+  <section id="psycho">
+    <h2><small>01</small>Psychometric results</h2>
+    <p>Do gel-free, dry-printed electrodes cost anything? Each curve is the average <b>psychometric function</b>, the probability of reporting a phosphene as the current rises, next to how uncomfortable the same trials felt.</p>
+
+    <div class="card">
+      <h3 class="sub">Dry-printed vs gel electrodes <span class="note">Experiment 1 · 6 people · 13 sessions · 1040 trials</span></h3>
+      <div class="pair">
+        <div>
+          <div class="pt">Detection</div>
+          <canvas id="psyA" aria-label="Average psychometric curves, dry versus gel, with standard-error bands"></canvas>
+          <div class="legend"><span><i style="background:var(--c1)"></i>dry (mean of 6)</span><span><i style="background:var(--c3)"></i>gel (mean of 5)</span><span><i style="background:var(--muted);opacity:.4;height:10px"></i>± 1 SE</span></div>
+        </div>
+        <div>
+          <div class="pt">Discomfort</div>
+          <canvas id="disc" aria-label="Distribution of discomfort ratings on a 0 to 5 scale, dry versus gel"></canvas>
+          <div class="legend"><span>share of trials at each rating (0 = none, 5 = barely bearable)</span></div>
+        </div>
+      </div>
+      <div class="readout">
+        <div><b>1.10</b><span>dry / gel threshold, paired within the 5 people tested with both (90% CI 0.91–1.34)</span></div>
+        <div><b>2 / 5</b><span>highest discomfort rating in 1040 trials, either electrode</span></div>
+        <div><b>0 / 70</b><span>false alarms on catch trials, dry (gel: 4 / 60)</span></div>
+      </div>
+    </div>
+    <p class="note">Logistic fits per session (detection against current), averaged within each person and then across people. Discomfort rose with current more steeply for dry electrodes (p = 0.016), but above threshold dry was rated uncomfortable more often in only 2 of the 5 people tested with both. Data from our manuscript in preparation.</p>
+  </section>
+
+  <section id="timing">
+    <h2><small>02</small>Timing the pulse</h2>
+    <p>Our question was not whether the envelope stimulates on its own. It was whether the <b>same pulse</b> becomes more effective when it lands on an envelope peak. Switch between the four conditions in the 3D view (00):</p>
+    <ul>
+      <li><b>Pulses alone</b>: the baseline.</li>
+      <li><b>On peaks</b>: each pulse coincides with the envelope maximum.</li>
+      <li><b>On troughs</b>: same carriers, pulse moved half a beat later, onto the minimum.</li>
+      <li><b>Unmodulated control</b>: both carriers at the same frequency. At the pulse the kHz amplitude equals the peak condition, but there is no beat at all.</li>
+    </ul>
+    <div class="callout">
+      <p><b>The clever comparison is the last one.</b> "On peaks" and "unmodulated control" deliver the same kHz amplitude at the moment of the pulse. If peaks still win, it's the <em>beat</em> that matters, not just extra kHz current. In the 3D view's signal strip the band has the same height on peaks and with the unmodulated carrier; only the beat is missing.</p>
+    </div>
+    <p class="note">One more subtlety from the head models: "peak" is defined by the two <em>sources</em> being in phase. Inside tissue that instant is an envelope maximum only where the two fields point the same way (E<sub>front</sub> · E<sub>neck</sub> &gt; 0) and a minimum where they point in opposite directions. With the montage as wired, the "peak" pulses met the local maximum on 99.7% of the retina and all along the nerve to the apex; reversing the neck pair would have flipped that.</p>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="loop">
+    <h2><small>03</small>Closing the loop</h2>
+    <p>A wearable stimulator has to keep working for minutes or hours, but the threshold for seeing a phosphene isn't fixed: it drifts upward as the visual system adapts, and drops back after a rest. A fixed intensity that starts near threshold soon falls below it.</p>
+    <p>Below, a simulated user answers "seen" or "not seen" on every trial. Pick a controller and see how well it keeps the stimulus near the target, a 70% chance of being seen.</p>
+
+    <div class="card">
+      <canvas id="loopCv" height="300" aria-label="Simulated closed-loop session: hidden threshold, chosen intensity and responses"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--c3)"></i>hidden 70% point (what we want to hit)</span>
+        <span><i style="background:var(--c1)"></i>intensity the controller chose</span>
+        <span><i style="background:var(--warm);height:8px;width:8px;border-radius:50%"></i>seen</span>
+        <span><i style="background:var(--muted);height:8px;width:8px;border-radius:50%"></i>not seen</span>
+        <span><i style="background:var(--border);width:3px;height:12px"></i>rest</span>
+      </div>
+      <div class="controls">
+        <span class="seg" role="group" aria-label="Controller">
+          <button data-ctl="fixed" aria-pressed="false">Fixed intensity</button>
+          <button data-ctl="stair" aria-pressed="false">Staircase</button>
+          <button data-ctl="bayes" aria-pressed="true">Bayesian tracker</button>
+        </span>
+        <button class="btn" id="playBtn">Pause</button>
+        <button class="btn" id="resetBtn">New session</button>
+        <label>Drift <input type="range" id="drift" min="0" max="2" step="0.1" value="1"> <span class="mono" id="driftV">1.0×</span></label>
+      </div>
+      <div class="readout">
+        <div><b id="onTarget">–</b><span>trials in the useful range (55–85% seen)</span></div>
+        <div><b id="seenRate">–</b><span>overall seen rate (target 70%)</span></div>
+        <div><b id="trialN">0</b><span>trials so far (rest every 20)</span></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><b>What the controllers do.</b> <em>Fixed</em> never changes. <em>Staircase</em> steps down after two "seen" answers and up after one "not seen". <em>Bayesian tracker</em> keeps a probability distribution over where the threshold is, widens it a little every trial because the threshold drifts (like a Kalman filter), sharpens it with each answer, and picks the intensity that should be seen 70% of the time.</p>
+    </div>
+    <p>In the study we built this kind of simulation from the effects we measured, to choose a controller and to size the follow-up experiment. The design it points to is a two-level loop: a slow tracker for the drifting threshold, and fast timing of each pulse to the beat.</p>
+  </section>
+
+  <footer>
+    Built by Daniele Re as a teaching aid. Parameters are illustrative, not fitted to data. · <a href="index.html">Portfolio</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function fit(cv) {
+    const d = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight || +cv.getAttribute('height');
+    cv.width = w * d; cv.height = h * d; const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0);
+    return { ctx, w, h };
+  }
+
+  /* ======================= Part 1: psychometric results ======================= */
+  // Experiment 1 (results/paper_exp1.json): p = 1 / (1 + exp(-slope * (I_mA - i50)))
+  const EXP1 = [
+    ['P01', 'dry', 0.047, 60.4], ['P01', 'wet', 0.0486, 114.9], ['P02', 'dry', 0.063, 80.1], ['P02', 'dry', 0.0886, 53.2],
+    ['P02', 'wet', 0.0566, 179.4], ['P02', 'wet', 0.1033, 63.1], ['P03', 'dry', 0.038, 212.6], ['P03', 'wet', 0.0266, 44.7],
+    ['P04', 'dry', 0.043, 100.3], ['P04', 'wet', 0.0469, 101.2], ['P05', 'dry', 0.068, 66.3], ['P05', 'wet', 0.0518, 166.8],
+    ['P06', 'dry', 0.0463, 219.3]];
+  const lgt = p => Math.log(p / (1 - p)), sig = x => 1 / (1 + Math.exp(-x));
+  const cvA = document.getElementById('psyA');
+  let A = fit(cvA);
+  function chips(id, items, init, onPick) {
+    const box = document.getElementById(id);
+    items.forEach(k => { const bt = document.createElement('button'); bt.textContent = k; bt.setAttribute('aria-pressed', k === init); bt.dataset.k = k;
+      bt.addEventListener('click', () => { box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === bt)); onPick(k); }); box.appendChild(bt); });
+  }
+  function axes(ctx, w, h, X, Y, xt, xlab) {
+    ctx.strokeStyle = css('--border'); ctx.fillStyle = css('--muted'); ctx.font = '11px JetBrains Mono, monospace'; ctx.lineWidth = 1;
+    [0, 0.25, 0.5, 0.75, 1].forEach(p => { ctx.beginPath(); ctx.moveTo(X(xt[0]), Y(p)); ctx.lineTo(X(xt[xt.length - 1]), Y(p)); ctx.stroke(); ctx.fillText(Math.round(p * 100) + '%', 4, Y(p) + 4); });
+    xt.forEach(v => ctx.fillText(String(v), X(v) - 10, h - 6));
+    ctx.fillText(xlab, X(xt[xt.length - 1]) - 70, h - 20);
+  }
+  function drawA() {
+    const { ctx, w, h } = A; ctx.clearRect(0, 0, w, h);
+    const x0 = 44, x1 = w - 12, top = 12, bot = h - 34, imax = 160;
+    const X = uA => x0 + uA / imax * (x1 - x0), Y = p => bot - p * (bot - top);
+    axes(ctx, w, h, X, Y, [0, 40, 80, 120, 160], 'current (µA)');
+    const nPts = 160, thr = {};
+    for (const [el, col] of [['wet', css('--c3')], ['dry', css('--c1')]]) {
+      // per person: average that person's session curves; then mean and standard error across people
+      const people = [...new Set(EXP1.filter(r => r[1] === el).map(r => r[0]))];
+      const mean = [], se = [];
+      for (let k = 0; k <= nPts; k++) {
+        const I = k / nPts * imax / 1000;
+        const v = people.map(pp => { const ss = EXP1.filter(r => r[0] === pp && r[1] === el); return ss.reduce((a, r) => a + sig(r[3] * (I - r[2])), 0) / ss.length; });
+        const m = v.reduce((a, b) => a + b, 0) / v.length;
+        const sd = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1));
+        mean.push(m); se.push(sd / Math.sqrt(v.length));
+      }
+      ctx.fillStyle = col; ctx.globalAlpha = 0.18; ctx.beginPath();
+      for (let k = 0; k <= nPts; k++) ctx.lineTo(X(k / nPts * imax), Y(Math.min(1, mean[k] + se[k])));
+      for (let k = nPts; k >= 0; k--) ctx.lineTo(X(k / nPts * imax), Y(Math.max(0, mean[k] - se[k])));
+      ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.beginPath();
+      for (let k = 0; k <= nPts; k++) { const x = X(k / nPts * imax), y = Y(mean[k]); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+      const k50 = mean.findIndex(v => v >= 0.5); thr[el] = k50 < 0 ? null : k50 / nPts * imax;
+      if (thr[el] != null) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(thr[el]), Y(0.5), 4, 0, 7); ctx.fill(); }
+    }
+  }
+  // Discomfort ratings, Experiment 1 (results/paper_exp1.json): trial counts at 0, 1, 2 (none above 2)
+  const DISC = { dry: [419, 122, 19, 0, 0, 0], wet: [433, 47, 0, 0, 0, 0] };
+  const cvD = document.getElementById('disc'); let Dc = fit(cvD);
+  function drawDisc() {
+    const { ctx, w, h } = Dc; ctx.clearRect(0, 0, w, h);
+    const x0 = 44, x1 = w - 12, top = 12, bot = h - 34, Y = p => bot - p * (bot - top);
+    ctx.font = '11px JetBrains Mono, monospace'; ctx.strokeStyle = css('--border'); ctx.fillStyle = css('--muted'); ctx.lineWidth = 1;
+    [0, 0.25, 0.5, 0.75, 1].forEach(p => { ctx.beginPath(); ctx.moveTo(x0, Y(p)); ctx.lineTo(x1, Y(p)); ctx.stroke(); ctx.fillText(Math.round(p * 100) + '%', 4, Y(p) + 4); });
+    const groupW = (x1 - x0) / 6, bw = groupW * 0.32;
+    for (let r = 0; r <= 5; r++) {
+      const gx = x0 + r * groupW + groupW / 2;
+      ctx.fillStyle = css('--muted'); ctx.textAlign = 'center'; ctx.fillText(String(r), gx, h - 18); ctx.textAlign = 'left';
+      [['dry', css('--c1'), -1], ['wet', css('--c3'), 1]].forEach(([el, col, side]) => {
+        const n = DISC[el].reduce((a, b) => a + b, 0), f = DISC[el][r] / n, x = gx + (side < 0 ? -bw - 1 : 1);
+        ctx.fillStyle = col; ctx.globalAlpha = 0.9; ctx.fillRect(x, Y(f), bw, Y(0) - Y(f)); ctx.globalAlpha = 1;
+        if (f > 0) { ctx.fillStyle = css('--head'); ctx.textAlign = 'center'; ctx.fillText(Math.round(f * 100) + '%', x + bw / 2, Y(f) - 4); ctx.textAlign = 'left'; }
+      });
+    }
+    ctx.fillStyle = css('--muted'); ctx.fillText('rating (0–5)', x1 - 84, h - 4);
+  }
+
+  /* ======================= Part 3: closed loop ======================= */
+  const loopCv = document.getElementById('loopCv');
+  let L = fit(loopCv), ctl = 'bayes', running = !reduce, driftK = 1;
+  const SLOPE = 4, TARGET = 0.7, GUESS = 0.02, LAPSE = 0.03, REST_EVERY = 20, N = 160;
+  const logit = p => Math.log(p / (1 - p)), off70 = logit(TARGET) / SLOPE;        // log-units above threshold for 70%
+  const pSeen = (x, th) => GUESS + (1 - GUESS - LAPSE) / (1 + Math.exp(-SLOPE * (x - th)));
+  const randn = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  // grid posterior for the Bayesian tracker (log-threshold)
+  const G = Array.from({ length: 161 }, (_, i) => -0.8 + i * 0.01);
+  let sess;
+  function newSession() {
+    sess = { th: 0, hist: [], post: G.map(g => Math.exp(-0.5 * (g / 0.25) ** 2)), stair: off70, run: 0, fixed: off70 };
+    norm(sess.post);
+  }
+  function norm(a) { const s = a.reduce((x, y) => x + y, 0); for (let i = 0; i < a.length; i++) a[i] /= s; }
+  function chooseX() {
+    if (ctl === 'fixed') return sess.fixed;
+    if (ctl === 'stair') return sess.stair;
+    const m = G.reduce((s, g, i) => s + g * sess.post[i], 0); return m + off70;
+  }
+  function trial() {
+    const n = sess.hist.length;
+    if (n >= N) return;
+    // threshold dynamics: random walk + adaptation drift, partial recovery after rests (sawtooth)
+    if (n > 0 && n % REST_EVERY === 0) sess.th -= 0.6 * sess.th;   // partial recovery toward baseline after a rest
+    sess.th += driftK * (0.006 + 0.025 * randn());
+    const x = chooseX(), seen = Math.random() < pSeen(x, sess.th);
+    sess.hist.push({ x, th: sess.th, seen, p: pSeen(x, sess.th), rest: n > 0 && n % REST_EVERY === 0 });
+    // controller updates
+    if (ctl === 'stair') {
+      if (seen) { sess.run++; if (sess.run >= 2) { sess.stair -= 0.04; sess.run = 0; } }
+      else { sess.stair += 0.04; sess.run = 0; }
+    }
+    // Bayesian tracker always runs (so switching is seamless): predict (diffuse) then update
+    const sd = 0.035 / 0.01, k = Math.ceil(3 * sd), ker = Array.from({ length: 2 * k + 1 }, (_, i) => Math.exp(-0.5 * ((i - k) / sd) ** 2));
+    const pred = G.map((_, i) => { let s = 0; for (let j = -k; j <= k; j++) { const q = i + j; if (q >= 0 && q < G.length) s += sess.post[q] * ker[j + k]; } return s; });
+    // shift for expected adaptation drift
+    sess.post = pred.map((_, i) => pred[Math.max(0, i - 1)]);
+    for (let i = 0; i < G.length; i++) { const p = pSeen(x, G[i]); sess.post[i] *= seen ? p : 1 - p; }
+    norm(sess.post);
+  }
+  function drawLoop() {
+    const { ctx, w, h } = L; ctx.clearRect(0, 0, w, h);
+    const padL = 46, padR = 12, top = 14, bot = h - 26;
+    const X = i => padL + (i / (N - 1)) * (w - padL - padR);
+    const Y = v => top + (1 - (v + 0.7) / 1.8) * (bot - top);
+    ctx.strokeStyle = css('--border'); ctx.fillStyle = css('--muted'); ctx.font = '11px JetBrains Mono, monospace'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, bot); ctx.lineTo(w - padR, bot); ctx.stroke();
+    ctx.save(); ctx.translate(12, (top + bot) / 2 + 30); ctx.rotate(-Math.PI / 2); ctx.fillText('intensity (log)', 0, 0); ctx.restore();
+    for (let i = 0; i < N; i += 40) ctx.fillText('trial ' + i, X(i) - 18, h - 8);
+    const H = sess.hist;
+    H.forEach((t, i) => { if (t.rest) { ctx.fillStyle = css('--border'); ctx.fillRect(X(i) - 1.5, top, 3, bot - top); } });
+    const line = (key, col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); H.forEach((t, i) => { const v = key === 'th' ? t.th + off70 : t.x; i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v)); }); ctx.stroke(); };
+    line('th', css('--c3'), 2); line('x', css('--c1'), 2);
+    H.forEach((t, i) => { ctx.fillStyle = t.seen ? css('--warm') : css('--muted'); ctx.beginPath(); ctx.arc(X(i), t.seen ? top + 6 : bot - 6, 2.6, 0, Math.PI * 2); ctx.fill(); });
+    const n = H.length;
+    const ok = n ? H.filter(t => t.p >= 0.55 && t.p <= 0.85).length / n : 0, seen = n ? H.filter(t => t.seen).length / n : 0;
+    document.getElementById('onTarget').textContent = n ? Math.round(ok * 100) + '%' : '–';
+    document.getElementById('seenRate').textContent = n ? Math.round(seen * 100) + '%' : '–';
+    document.getElementById('trialN').textContent = n;
+  }
+  document.querySelectorAll('[data-ctl]').forEach(b => b.addEventListener('click', () => {
+    ctl = b.dataset.ctl; document.querySelectorAll('[data-ctl]').forEach(x => x.setAttribute('aria-pressed', x === b)); newSession(); drawLoop();
+  }));
+  const playBtn = document.getElementById('playBtn');
+  playBtn.textContent = running ? 'Pause' : 'Run';
+  playBtn.addEventListener('click', () => { running = !running; playBtn.textContent = running ? 'Pause' : 'Run'; });
+  document.getElementById('resetBtn').addEventListener('click', () => { newSession(); drawLoop(); });
+  document.getElementById('drift').addEventListener('input', e => { driftK = +e.target.value; document.getElementById('driftV').textContent = driftK.toFixed(1) + '×'; });
+
+  /* ======================= loop ======================= */
+  newSession(); drawA(); drawDisc(); drawLoop();
+  if (reduce) { for (let i = 0; i < N; i++) trial(); drawLoop(); }
+  let lastT = performance.now(), acc = 0;
+  function frame(now) {
+    const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+    if (running) { acc += dt; while (acc > 0.12) { acc -= 0.12; if (sess.hist.length >= N) newSession(); trial(); } drawLoop(); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  addEventListener('resize', () => { A = fit(cvA); Dc = fit(cvD); L = fit(loopCv); drawA(); drawDisc(); drawLoop(); });
+})();
+</script>
+</body>
+</html>
