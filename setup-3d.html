@@ -21,7 +21,7 @@
   @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f6f7fb; --panel: rgba(255,255,255,.85); --border: rgba(40,60,140,.18); --text: #3a4560; --muted: #6a7590; --head: #0e1630; --pulse: #b7811a; --front: #0aa89b; --neck: #7a4fe0; } }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.5 "Inter", system-ui, sans-serif; overflow: hidden; }
-  #stage { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
   #stage:active { cursor: grabbing; }
   .ui { position: fixed; z-index: 5; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(8px); }
   .top { top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 10px; }
@@ -582,7 +582,12 @@
 
 
   /* ---------- animate ---------- */
-  function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  function resize() {
+    const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
+    // portrait screens: widen the vertical field so the head keeps the same width it has in landscape
+    camera.fov = camera.aspect < 1 ? 2 * Math.atan(Math.tan(16 * Math.PI / 180) / camera.aspect) * 180 / Math.PI : 32;
+    camera.updateProjectionMatrix();
+  }
   addEventListener('resize', resize); resize();
   let last = performance.now(), st = 0;
   function frame(now) {
