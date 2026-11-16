@@ -1,6 +1,6 @@
 /* Visitor analytics (Umami Cloud: cookie-free, no consent banner needed).
    To turn it on: paste the website ID from cloud.umami.is below. Until then nothing is loaded or sent.
-   Tracking only runs on the public domain, so local previews never count.
+   Tracking only runs on the public domains, so local previews never count.
 
    What is recorded (anonymous; no names, no cookies):
    - page views, referrer, country, device (Umami's defaults)
@@ -9,7 +9,7 @@
    - theme switch, scroll depth (50% / 90%), and ?ref=<tag> campaign tags from application links */
 (function () {
   var WEBSITE_ID = 'bc6a171b-b82e-48d0-89bc-6b86477f5efc';   // Umami Cloud (EU), site "Daniele Re portfolio"
-  var DOMAIN = 'danielere.github.io';
+  var DOMAINS = ['danielere.com', 'www.danielere.com', 'danielere.github.io'];
   var page = (location.pathname.split('/').pop() || 'index.html').replace('.html', '') || 'index';
   var queue = [];
   function track(name, data) {
@@ -17,11 +17,11 @@
     else queue.push([name, data]);
   }
   window.drTrack = track;
-  if (WEBSITE_ID && location.hostname === DOMAIN) {
+  if (WEBSITE_ID && DOMAINS.indexOf(location.hostname) >= 0) {
     var s = document.createElement('script');
     s.defer = true; s.src = 'https://cloud.umami.is/script.js';
     s.setAttribute('data-website-id', WEBSITE_ID);
-    s.setAttribute('data-domains', DOMAIN);
+    s.setAttribute('data-domains', DOMAINS.join(','));
     s.onload = function () { queue.splice(0).forEach(function (e) { umami.track(e[0], e[1]); }); };
     document.head.appendChild(s);
   }
