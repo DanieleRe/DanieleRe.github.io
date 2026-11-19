@@ -9,6 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ultrasound Through the Skull</title>
 <meta name="description" content="Live 2-D acoustic simulation: focusing 500 kHz ultrasound on a deep brain target through the skull, with three ways of planning the array.">
+<link rel="canonical" href="https://danielere.com/fus-skull.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -75,7 +76,7 @@
 <body>
 <div class="wrap">
   <header>
-    <a class="back" href="index.html#work">← Back to portfolio</a>
+    <a class="back" href="/#work">← Back to portfolio</a>
     <h1><span class="grad">Focusing ultrasound through the skull</span></h1>
     <p class="lede">Low-intensity focused ultrasound can reach deep brain targets without surgery, but the skull bends and scrambles the beam. This is a live acoustic simulation of a 64-element array aiming at a deep, cingulate-like target through three different skulls. Pick how the array is planned and watch where the energy actually lands.</p>
   </header>
@@ -145,7 +146,7 @@
 
   <p class="note">Caveats: 2-D (no out-of-plane refraction), synthetic skulls rather than CT-derived ones, a simple second-order FDTD with crude bone loss and no shear waves. The live view runs on a coarser 0.5 mm grid than the 0.3 mm analysis, so its numbers differ slightly from the table; the ranking does not. Next step: CT-based skulls (e.g. the ITRUSST benchmark geometries) and a 3-D solver.</p>
 
-  <footer>Independent research by Daniele Re. Simulation code: a small staggered-grid FDTD in Python, ported line by line to run in your browser. · <a href="index.html">Portfolio</a></footer>
+  <footer>Independent research by Daniele Re. Simulation code: a small staggered-grid FDTD in Python, ported line by line to run in your browser. · <a href="/">Portfolio</a></footer>
 </div>
 
 <script src="fus_skull_data.js"></script>
